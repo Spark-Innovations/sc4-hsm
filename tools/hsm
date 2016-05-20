@@ -1,0 +1,24 @@
+#!/bin/bash
+
+HSM=$(ls /dev/* | grep cu.usbmodem | head -1)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+if [ "$HSM" ]
+then
+echo Connecting to SC4-HSM at $HSM
+$DIR/term $HSM
+exit 0
+fi
+
+dfu=$(dfu-util --list | tr ' ' '\n' | grep serial | head -1 | cut -d = -f 2)
+
+if [ "$dfu" ]
+then
+dfu=$(echo $dfu | tr '"' ' ')
+echo Writing firmware to SC4-HSM serial# $dfu
+dfu-util -S $dfu -a 0 -D $DIR/../src/build/firmware.dfu
+exit 0
+fi
+
+echo HSM not found
+exit -1
