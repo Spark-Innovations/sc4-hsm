@@ -83,9 +83,17 @@ Note the serial number of your device (in this case 335A36863335).  To upload th
 dfu-util -S [your-serial-number] -a 0 -D build/firmware.dfu
 ```
 
+NOTE: It is actually not necessary to specify the serial number.  If you only have one DFU device plugged in (which should normally be the case) then you can just do:
+
+```
+dfu-util -a 0 -D build/firmware.dfu
+```
+
+and it should work.  But specifying the serial number insures that you don't accidentally upload the SC4-HSM firmware to some other device.
+
 Once the firmware is uploaded, run it by pressing the Reset button again (without holding down the DFU button, obviously) or unplug the device and plug it back in again.
 
-Note that there is a little script in the tools directory called 'hsm' that automates the process of communicating with the SC4-HSM and uploading new firmware.  When you run 'hsm' it will look for a connected SC4-HSM, determine whether or not it is in DFU mode, and then either connect you to the device using the "term" program or upload the firmware, as appropriate.  So in general, all you need to do is run 'hsm' and it should do the Right Thing automagically.
+Note that there is a little script in the tools directory called 'hsm' that automates the process of communicating with the SC4-HSM and uploading new firmware.  When you run 'hsm' it will look for a connected SC4-HSM, determine whether or not it is in DFU mode, and then either connect you to the device using the "term" program or upload the firmware, as appropriate.  So in general, all you need to do is run 'hsm' and it should do the Right Thing automagically.  This script works on OS X.  If you are running on Linux you will need to edit the 
 
 ## Building the firmware
 
@@ -133,15 +141,25 @@ RDP Level 1 is a reversible protection level that does the following:
 2. Fully erases the flash on any attempt to write to it
 3. Fully erases the flash when the RDP level is set back to 0
 
-RDP Level 2 is a permanent protection that disables DFU mode entirely.  It also disables support for hardware debugging.
+RDP Level 2 is a permanent protection that disables DFU mode entirely.  It also disables support for hardware debugging.  RDP level 2 is by far the most secure.  It will protect your keys against all but the most sophisticated adversaries.  Getting around RDP level 2 requires decapping the chip.  However, it is PERMANENT.  Once you enter RDP level 2 you can never go back, which means you cannot load new code.  Because of this, RDP level 2 is not directly supported by the development firmware.  If you want to invoke RDP level 2 you will need to modify the firmware to do this.  It isn't difficult.  If you can't figure out how to do it, you shouldn't be doing it.
 
-*** WARNING!!! ***
+To enable RDP level 1, simply connect to the HSM and type R.
 
-Using the RDP feature is dangerous, and can result in your device becoming permanently disabled (bricked) if you are not careful.
+To disable RDP level 1, do the following:
 
-RDP level 2 is by far the most secure.  It will protect your keys against all but the most sophisticated adversaries.  Getting around RDP level 2 requires decapping the chip.  However, it is PERMANENT.  Once you enter RDP level 2 you can never go back, which means you cannot load new code.  Do not use RDP level 2 unless you are absolutely sure you know what you are doing.
+1. Put device in DFU mode by holding down the DFU button and pressing RESET
 
-RDP level 1 is reversible, but there is a very important caveat: because switching from RDP level 1 back to RDP level 0 involves erasing all of the flash memory, it is a time-consuming operation, during which the device will appear to be hung.  If the flash erase procedure is interrupted, either by resetting the device or switching off its power, the SC4-HSM will become PERMANENTLY DISABLED.  This state is unrecoverable.  So think carefully before you use the RDP feature.
+2. Type: dfu-util -s 0:force:unprotect -a 0 -D path-to/src/build/firmware.dfu
+
+3. Wait 1 minute while the chip performs a full flash erase.
+
+4. Put device in DFU mode again as in step 1
+
+5. Reload the firmware according to the instructions above in the section entitled "Programming the SC4-HSM" (i.e. type: dfu-util -a 0 -D build/firmware.dfu)
+
+Note that in step 3, dfu-util  will return *before* the flash erase is complete.  There is no feedback on when the flash erase is complete.  You just have to time it.  If you stop the process before it finishes, then attempts to load the firmware will fail with the message "ERASE_PAGE not correctly executed".  If that happens, just repeat the above procedure and give it a little more time.
+
+NOTE: Readout protection will prevent an adversary from *reading* your keys if you lose physical possession of the device, but it will (obviously) not prevent them from *using* your keys unless they are protected by a pass-phrase.  This feature will be released in a future version of the firmware.
 
 ## A tour of the source code
 
