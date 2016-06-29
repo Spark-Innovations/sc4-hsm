@@ -6,13 +6,17 @@
 #include "tweetnacl.h"
 #include "hardware.h"
 #include "utils.h"
+#include "stm32f4xx_hal_flash_ex.h"
 
 unsigned char cmd[512];
+void show_mac();
 
 void user_tick_handler() {
   // This routine is called once every millisecond by an interrupt
   // service routine.  User ISR code goes here.
 }
+
+void system_reset() { NVIC_SystemReset(); }
 
 // Global storage for currently active key
 // _ssk is 64 bytes because TweetNaCl keeps a copy of the spk
@@ -44,7 +48,23 @@ void show_current_key() {
   newline();
 }
 
+int rdp_enabled() {
+  FLASH_OBProgramInitTypeDef opts;
+  HAL_FLASHEx_OBGetConfig(&opts);
+  return opts.RDPLevel != OB_RDP_LEVEL_0;
+}
+
 void show_keys() {
+  if (rdp_enabled()) {
+    printf("Can't display key seeds because read protection is enabled.\n");
+  } else {
+    printf("Seeds:\n");
+    for (int i=0; i<10; i++) {
+      printf("%d: ", i);
+      printh((u8*)FLASH_USER_START_ADDR + (i*32), 32);
+      newline();
+    }
+  }
   printf("Keys:\n");
   for (int i=0; i<10; i++) {
     printf("%d: ", i);
@@ -83,7 +103,7 @@ void provision(int n) {
   _loadkey(seeds[n]);
   memcpy(seeds[n+10], spk, 32);
   write_flash((u8*)seeds, 0, sizeof(seeds));
-  show_keys();
+  printf("Done.\n");
 }
 
 
@@ -147,77 +167,40 @@ void randi(u8 *s) {
   printf("\n");
 }
 
-// RDP = ReaD Protection
-// AA = Level 0, no protection
-// CC = Level 2, full protection (irreversible)
-// Any other value (canonical 55) = Level 1, partial protection
-
-#include "stm32f4xx_hal_flash_ex.h"
-
-void rdp(u8 c) {
-
-  FLASH_OBProgramInitTypeDef opts;
-
-  HAL_FLASHEx_OBGetConfig(&opts);
-
-  int rdpl = opts.RDPLevel;
-  int _rdpl = (rdpl == OB_RDP_LEVEL_0 ? 0 :
-	       (rdpl == OB_RDP_LEVEL_1 ? 1 :
-		(rdpl == OB_RDP_LEVEL_2 ? 2 :
-		 -1)));
-
-  printf("Current RDP level: %x (%d)\n", rdpl, _rdpl);
-
-  if (!c) return;
-
-  int level;
-  switch (c) {
-  case '0': level = OB_RDP_LEVEL_0; break;
-  case '1': level = OB_RDP_LEVEL_1; break;
-  default:
-    printf("RDP level must be 0 or 1\n");
+void erase_keys() {
+  printf("Are you sure you want to erase all of the keys on this device?\n");
+  printf("This cannot be undone.  (y/n)\n");
+  readln(cmd, sizeof(cmd));
+  if (cmd[0] != 'y') {
+    printf("Aborted\n");
     return;
   }
-
-  printf("Setting RDP %x\n", level);
-
-  int status = HAL_FLASH_OB_Unlock();
-  if (status != HAL_OK) {
-    printf("HAL_FLASH_OB_Unlock failed");
-    return;
-  }
-
-  opts.OptionType = OPTIONBYTE_RDP;
-  opts.RDPLevel = level;
-  status = HAL_FLASHEx_OBProgram(&opts);
-  if (status != HAL_OK) {
-    printf("HAL_FLASH_OBProgram failed");
-    return;
-  }
-  
-  printf("Setting RDP level.  DO NOT DISCONNECT!!!\n");
-  lcd_print("\\2  DO NOT\nDISCONNECT");
-  set_led(RED);
-  status = HAL_FLASH_OB_Launch();
-  if (status == HAL_OK) {
-    printf("Done.  It is now safe to disconnect.\n");
-    show_banner();
-    set_led(GREEN);
-    delay(500);
-    set_led(OFF);
-  } else {
-    printf("*** FAILED!!! ***\n");
-  }
-
-  HAL_FLASHEx_OBGetConfig(&opts);
-  printf("New RDP level: %x\n", opts.RDPLevel);
-
-  status = HAL_FLASH_OB_Lock();
-  if (status != HAL_OK) printf("HAL_FLASH_OB_Lock failed!\n");
+  erase_user_flash();
+  printf("Done\n");
+  show_mac();
 }
 
-void system_reset() {
-  NVIC_SystemReset();
+void enable_rdp() {
+  printf("Enabling read protection.\n");
+  printf("WARNING: This cannot be undone without losing all\n");
+  printf("of the keys currently stored on this device.\n");
+  printf("Are you sure you want to proceed? (y/n)\n");
+
+  readln(cmd, sizeof(cmd));
+  if (cmd[0] != 'y') {
+    printf("Aborted\n");
+    return;
+  }
+
+  FLASH_OBProgramInitTypeDef opts;
+  opts.OptionType = OPTIONBYTE_RDP;
+  opts.RDPLevel = OB_RDP_LEVEL_1;
+  HAL_FLASH_OB_Unlock();
+  HAL_FLASHEx_OBProgram(&opts);
+  HAL_FLASH_OB_Launch();
+  HAL_FLASH_OB_Lock();
+  printf("Read protection has been enabled.\n");
+  printf("See the documentation for instructions on how to disable it.\n");
 }
 
 void show_mac() {
@@ -225,19 +208,21 @@ void show_mac() {
   printh((u8 *)STM32_UUID, 12);
   newline();
   if (*(u8*)FLASH_USER_START_ADDR == 0xFF) {
-    printf("No keys have not been provisioned!\n");
+    printf("No keys have been provisioned!\n");
     printf("Automatically provisioning a default key\n");
     loadkey(0);
   } else {
     show_current_key();
   }
+  printf("Read protection is %s\n", rdp_enabled() ? "ENABLED" : "DISABLED");
   printf("Type ? for a list of commands\n");
 }
 
 void help() {
+  print("k: Show available keys\n");
   print("l[n]: Load key N\n");
   print("P[n]: Provision key N\n");
-  print("k: Show available keys\n");
+  print("R: Enable read protection\n");
   print("s[string]: Sign string with currently loaded key\n");
   print("d[key]: Generate a diffie-hellman key\n");
   print("r[N]: Display N raw random numbers\n");
@@ -246,32 +231,28 @@ void help() {
   print("m: Moire pattern demo\n");
   print("E: Erase all keys\n");
   print("S: Run TinyScheme\n");
-  print("R: System reset\n");
+  print("X: System reset\n");
   print("0-7: Turn LED on/off\n");
-  print("X[n]: Enable read protection at level n.\n");
-  print("*** Warning! Enabling/disabling read protection can be dangerous!\n");
-  print("*** Read the documentation BEFORE attempt to use this feature!\n");
 }
 
 void loop() {
-  int cnt = readln(cmd, sizeof(cmd));
-  
+  int cnt = readln(cmd, sizeof(cmd));  
   switch (cmd[0]) {
   case '\0': show_mac(); break;
-  case '0'...'7': set_led(cmd[0]-'0'); break;
   case 'k': show_keys() ; break;
   case 'l': loadkey(cmd[1] - '0'); break;
   case 'P': provision(cmd[1] - '0'); break;
+  case 'R': enable_rdp(); break;
   case 's': sign(cmd + 1, cnt - 1); break;
   case 'd': diffie_helman((char *)(cmd + 1)); break;
   case 'r': randi(cmd+1); break;
   case 'p': lcd_print((char *)(cmd+1)); break;
   case 'n': lcd_noise(); break;
   case 'm': moire(); break;
-  case 'E': erase_user_flash(); break;
+  case 'E': erase_keys(); break;
   case 'S': scheme_main(); break;
-  case 'R': system_reset(); break;
-  case 'X': rdp(cmd[1]); break;
+  case 'X': system_reset(); break;
+  case '0'...'7': set_led(cmd[0]-'0'); break;
   case '?' : help(); break;
   default: printf("Error\n");
   }  
