@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HSM=$(ls /dev/cu.usbmodem*)
+HSM=$(ls /dev/ttyACM* /dev/cu.usbmodem* 2> /dev/null)
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 if [ "$HSM" ]
