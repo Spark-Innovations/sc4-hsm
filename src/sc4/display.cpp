@@ -13,7 +13,7 @@ extern "C" void init_display(void) {
 }
 
 string banner = (char*)
-  "\\2 SC4-HSM\\1 v0.1\n\n  Copyright (c) 2016\nSpark Innovations Inc";
+  "\\2 SC4-HSM\\1 v0.2\n\n  Copyright (c) 2016\nSpark Innovations Inc";
 
 extern "C" void show_banner(void) {
   lcd_print(banner);
