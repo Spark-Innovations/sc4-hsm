@@ -12,7 +12,7 @@
 The SC4-HSM is a prototype USB Hardware Secure Module based on the [STM32F415][1] microprocessor.  The features of this processor include:
 
 + 1 MB flash memory
-+ 32 kB RAM
++ 128 kB RAM
 + A hardware random-number generator (HWRNG)
 + Dedicated cryptographic acceleration instructions (AES, 3-DES and SHA1)
 + Hardware memory readout protection (RDP)
