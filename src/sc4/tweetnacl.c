@@ -1,38 +1,44 @@
 #include "tweetnacl.h"
-
-#define FOR(i, n) for (i = 0; i < n; ++i)
+#define FOR(i, n) for (i = 0; (int)i < (int)n; ++i)
 #define sv static void
 
-#ifndef u32
+typedef unsigned char u8;
 typedef unsigned long u32;
-#endif
-#ifndef u64
 typedef unsigned long long u64;
-#endif
-#ifndef i64
 typedef long long i64;
-#endif
 typedef i64 gf[16];
-extern void randombytes(u8 *, int);
+extern void randombytes(u8 *, u64);
 
 static const u8 _0[16], _9[32] = {9};
 static const gf gf0,
-    gf1 = {1}, _121665 = {0xDB41, 1},
-    D = {0x78a3, 0x1359, 0x4dca, 0x75eb, 0xd8ab, 0x4141, 0x0a4d, 0x0070,
-         0xe898, 0x7779, 0x4079, 0x8cc7, 0xfe73, 0x2b6f, 0x6cee, 0x5203},
-    D2 = {0xf159, 0x26b2, 0x9b94, 0xebd6, 0xb156, 0x8283, 0x149a, 0x00e0,
-          0xd130, 0xeef3, 0x80f2, 0x198e, 0xfce7, 0x56df, 0xd9dc, 0x2406},
-    X = {0xd51a, 0x8f25, 0x2d60, 0xc956, 0xa7b2, 0x9525, 0xc760, 0x692c,
-         0xdc5c, 0xfdd6, 0xe231, 0xc0a4, 0x53fe, 0xcd6e, 0x36d3, 0x2169},
-    Y = {0x6658, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666,
-         0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666},
-    I = {0xa0b0, 0x4a0e, 0x1b27, 0xc4ee, 0xe478, 0xad2f, 0x1806, 0x2f43,
-         0xd7a7, 0x3dfb, 0x0099, 0x2b4d, 0xdf0b, 0x4fc1, 0x2480, 0x2b83};
+  gf1 = {1}, _121665 = {0xDB41, 1},
+  
+  // Edwards curve parameter
+  D = {0x78a3, 0x1359, 0x4dca, 0x75eb, 0xd8ab, 0x4141, 0x0a4d, 0x0070,
+       0xe898, 0x7779, 0x4079, 0x8cc7, 0xfe73, 0x2b6f, 0x6cee, 0x5203},
 
+  // D times 2
+  D2 = {0xf159, 0x26b2, 0x9b94, 0xebd6, 0xb156, 0x8283, 0x149a, 0x00e0,
+	0xd130, 0xeef3, 0x80f2, 0x198e, 0xfce7, 0x56df, 0xd9dc, 0x2406},
+  
+  // X coordinate of base point
+  X = {0xd51a, 0x8f25, 0x2d60, 0xc956, 0xa7b2, 0x9525, 0xc760, 0x692c,
+       0xdc5c, 0xfdd6, 0xe231, 0xc0a4, 0x53fe, 0xcd6e, 0x36d3, 0x2169},
+  
+  // Y-cooredinate of base point
+  Y = {0x6658, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666,
+       0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666, 0x6666},
+
+  // sqrt(-1) mod 2^255-19
+  I = {0xa0b0, 0x4a0e, 0x1b27, 0xc4ee, 0xe478, 0xad2f, 0x1806, 0x2f43,
+       0xd7a7, 0x3dfb, 0x0099, 0x2b4d, 0xdf0b, 0x4fc1, 0x2480, 0x2b83};
+
+// Rotate 32-bit integer left
 static u32 L32(u32 x, int c) {
   return (x << c) | ((x & 0xffffffff) >> (32 - c));
 }
 
+// load 32-bit integer little-endian
 static u32 ld32(const u8 *x) {
   u32 u = x[3];
   u = (u << 8) | x[2];
@@ -40,12 +46,14 @@ static u32 ld32(const u8 *x) {
   return (u << 8) | x[0];
 }
 
+// load 64-bit integer big-endian
 static u64 dl64(const u8 *x) {
   u64 i, u = 0;
   FOR(i, 8) u = (u << 8) | x[i];
   return u;
 }
 
+// store 32-bit integer little-endian
 sv st32(u8 *x, u32 u) {
   int i;
   FOR(i, 4) {
@@ -54,6 +62,7 @@ sv st32(u8 *x, u32 u) {
   }
 }
 
+// store 64-bit integer big-endian
 sv ts64(u8 *x, u64 u) {
   int i;
   for (i = 7; i >= 0; --i) {
@@ -62,7 +71,8 @@ sv ts64(u8 *x, u64 u) {
   }
 }
 
-static int vn(const u8 *x, const u8 *y, u32 n) {
+// merged crypto_verify_16, crypto_verify_32
+static int vn(const u8 *x, const u8 *y, int n) {
   u32 i, d = 0;
   FOR(i, n) d |= x[i] ^ y[i];
   return (1 & ((d - 1) >> 8)) - 1;
@@ -72,6 +82,7 @@ int crypto_verify_16(const u8 *x, const u8 *y) { return vn(x, y, 16); }
 
 int crypto_verify_32(const u8 *x, const u8 *y) { return vn(x, y, 32); }
 
+// merged crypto_core_salsa20, crypto_core_hsalsa20
 sv core(u8 *out, const u8 *in, const u8 *k, const u8 *c, int h) {
   u32 w[16], x[16], y[16], t[4];
   int i, j, m;
@@ -475,6 +486,10 @@ static u64 Sigma1(u64 x) { return R(x, 14) ^ R(x, 18) ^ R(x, 41); }
 static u64 sigma0(u64 x) { return R(x, 1) ^ R(x, 8) ^ (x >> 7); }
 static u64 sigma1(u64 x) { return R(x, 19) ^ R(x, 61) ^ (x >> 6); }
 
+///////////////////////////////////////////////////////////////////////
+//
+// SHA512
+//
 static const u64 K[80] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL,
     0xe9b5dba58189dbbcULL, 0x3956c25bf348b538ULL, 0x59f111f1b605d019ULL,
@@ -504,37 +519,42 @@ static const u64 K[80] = {
     0x431d67c49c100d4cULL, 0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL,
     0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL};
 
-int crypto_hashblocks(u8 *x, const u8 *m, u64 n) {
-  u64 z[8], b[8], a[8], w[16], t;
+void crypto_hashblock(const u8* m, u64* a, u64* z) {
   int i, j;
+  u64 b[8], w[16], t;
+  FOR(i, 16) w[i] = dl64(m + 8 * i);
+  
+  FOR(i, 80) {
+    FOR(j, 8) b[j] = a[j];
+    t = a[7] + Sigma1(a[4]) + Ch(a[4], a[5], a[6]) + K[i] + w[i % 16];
+    b[7] = t + Sigma0(a[0]) + Maj(a[0], a[1], a[2]);
+    b[3] += t;
+    FOR(j, 8) a[(j + 1) % 8] = b[j];
+    if (i % 16 == 15)
+      FOR(j, 16)
+	w[j] +=
+	w[(j + 9) % 16] + sigma0(w[(j + 1) % 16]) + sigma1(w[(j + 14) % 16]);
+  }
+  
+  FOR(i, 8) {
+    a[i] += z[i];
+    z[i] = a[i];
+  }
+}
 
-  FOR(i, 8) z[i] = a[i] = dl64(x + 8 * i);
+int crypto_hashblocks(u8 *h, const u8 *m, u64 n) {
+  u64 a[8], z[8];
+  int i;
+
+  FOR(i, 8) a[i] = z[i] = dl64(h + 8 * i);
 
   while (n >= 128) {
-    FOR(i, 16) w[i] = dl64(m + 8 * i);
-
-    FOR(i, 80) {
-      FOR(j, 8) b[j] = a[j];
-      t = a[7] + Sigma1(a[4]) + Ch(a[4], a[5], a[6]) + K[i] + w[i % 16];
-      b[7] = t + Sigma0(a[0]) + Maj(a[0], a[1], a[2]);
-      b[3] += t;
-      FOR(j, 8) a[(j + 1) % 8] = b[j];
-      if (i % 16 == 15)
-        FOR(j, 16)
-      w[j] +=
-          w[(j + 9) % 16] + sigma0(w[(j + 1) % 16]) + sigma1(w[(j + 14) % 16]);
-    }
-
-    FOR(i, 8) {
-      a[i] += z[i];
-      z[i] = a[i];
-    }
-
+    crypto_hashblock(m, a, z);
     m += 128;
     n -= 128;
   }
 
-  FOR(i, 8) ts64(x + 8 * i, z[i]);
+  FOR(i, 8) ts64(h + 8 * i, z[i]);
 
   return n;
 }
@@ -571,6 +591,53 @@ int crypto_hash(u8 *out, const u8 *m, u64 n) {
 
   return 0;
 }
+
+// SHA512 for streamed input
+extern int crypto_hash_stream_read_block(u8* buf); // Return #chars read
+
+// e.g.:
+/*
+# include <stdio.h>
+extern int crypto_hash_stream_read_block(u8* buf) {
+  return fread(buf, 1, 128, stdin);
+}
+*/
+
+int crypto_hash_stream(u8 *out) {
+  u8 h[64];
+  u8 buf[128];
+  u64 msglen = 0;
+  int i;
+
+  FOR(i, 64) h[i] = iv[i];
+
+  // Process all but the final block
+  u64 a[8], z[8];
+  FOR(i, 8) a[i] = z[i] = dl64(h + 8 * i);
+  int n = crypto_hash_stream_read_block(buf);
+  msglen += n;
+  while (n >= 128) {
+    crypto_hashblock(buf, a, z);
+    n = crypto_hash_stream_read_block(buf);
+    msglen += n;
+  }
+  FOR(i, 8) ts64(h + 8 * i, z[i]);
+
+  // Process final block, n is the length of the final block
+  u8 x[256];
+  FOR(i, 256) x[i] = 0;
+  FOR(i, n) x[i] = buf[i];
+  x[n] = 128;
+  n = 256 - 128 * (n < 112);
+  x[n - 9] = msglen >> 61;
+  ts64(x + n - 8, msglen << 3);
+  crypto_hashblocks(h, x, n);
+
+  FOR(i, 64) out[i] = h[i];
+
+  return 0;
+}
+
 
 sv add(gf p[4], gf q[4]) {
   gf a, b, c, d, t, e, f, g, h;
@@ -796,6 +863,9 @@ int crypto_sign_open(u8 *m, u64 *mlen, const u8 *sm, u64 n, const u8 *pk) {
   return 0;
 }
 
+// Convert Ed25519 keys to Curve25519 keys
+// SPK = Signing Public Key (i.e. Ed25519)
+// EPK = Encryption Public Key (i.e. Curve25519)
 void spk2epk(u8 *epk, u8 *spk) {
   gf n, d;
   unpack25519(n, spk);
