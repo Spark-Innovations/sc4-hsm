@@ -1,12 +1,13 @@
 
 #include "stm32f4xx_hal.h"
 #include "usb_device.h"
-#include "utils.h"
 #include "init.h"
 #include "tweetnacl.h"
+#include "tweetnacl-aux.h"
 #include "hardware.h"
 #include "utils.h"
 #include "stm32f4xx_hal_flash_ex.h"
+#include "b58.h"
 
 unsigned char cmd[512];
 void show_mac();
@@ -106,7 +107,6 @@ void provision(int n) {
   printf("Done.\n");
 }
 
-
 void sign(u8 *bytes, int cnt) {
   u8 hash[64];
   u8 sig[crypto_hash_BYTES + 64];
@@ -157,6 +157,48 @@ void diffie_helman(char *pkh) {
   crypto_scalarmult(k, esk, pk);
   printh(k, 32);
   newline();
+}
+
+int hash_cnt = 0;
+
+u8 serial_read_wait() {
+  while (!serial_available());
+  return serial_read();
+}
+
+int crypto_hash_stream_read_block(u8* buf) {
+  if (!hash_cnt) return 0;
+  int i;
+  char msg[128];
+  sprintf(msg, "Hashing %d bytes", hash_cnt);
+  lcd_print(msg);
+  print(".");     // Indicate ready to receive a block
+  if (hash_cnt>=128) {
+    FOR(i, 128) buf[i]=serial_read_wait();
+    hash_cnt -= 128;
+    return 128;
+  } else {
+    FOR(i, hash_cnt) buf[i]=serial_read_wait();
+    int cnt = hash_cnt;
+    hash_cnt = 0;
+    return cnt;
+  }
+}
+
+void hash_data(u8* s) {
+  sscanf((char*)s, "%d", &hash_cnt);
+  hash_state hs;
+  u8 hash[64];
+  crypto_hash_stream(hash, &hs);
+  show_banner();
+
+  char b58buf[128];  // Actually only need 96 characters worst case
+  size_t b58len;
+  bool flag = b58enc(b58buf, &b58len, hash, 64);
+  if (!flag) sprintf(b58buf, "FAIL");
+  printf("%s\n", b58buf);
+  b58buf[84]=0;
+  lcd_print(b58buf);
 }
 
 void randi(u8 *s) {
@@ -225,6 +267,7 @@ void help() {
   print("R: Enable read protection\n");
   print("s[string]: Sign string with currently loaded key\n");
   print("d[key]: Generate a diffie-hellman key\n");
+  print("h[N]: Compute the SHA512 hash of N bytes of data\n");
   print("r[N]: Display N raw random numbers\n");
   print("p[string]: Print string on the built-in display\n");
   print("n: Show random noise on built-in display\n");
@@ -236,7 +279,12 @@ void help() {
 }
 
 void loop() {
+  while(!serial_available());
+  set_led(YELLOW);
   int cnt = readln(cmd, sizeof(cmd));  
+  set_led(GREEN);
+  delay(100);
+  set_led(OFF);
   switch (cmd[0]) {
   case '\0': show_mac(); break;
   case 'k': show_keys() ; break;
@@ -245,6 +293,7 @@ void loop() {
   case 'R': enable_rdp(); break;
   case 's': sign(cmd + 1, cnt - 1); break;
   case 'd': diffie_helman((char *)(cmd + 1)); break;
+  case 'h': hash_data(cmd +1); break;
   case 'r': randi(cmd+1); break;
   case 'p': lcd_print((char *)(cmd+1)); break;
   case 'n': lcd_noise(); break;

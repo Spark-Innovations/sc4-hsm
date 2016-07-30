@@ -2,14 +2,12 @@
 #define __utils__
 
 #include <string.h>
+#include "tweetnacl-aux.h"
 
 #define print serial_print
 #define printf serial_print
 
-typedef unsigned char u8;
-typedef unsigned int u32;
-typedef unsigned long long u64;
-typedef char* string;
+typedef char * string;
 
 #ifdef __cplusplus
 extern "C" {
