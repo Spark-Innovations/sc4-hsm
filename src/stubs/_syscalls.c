@@ -62,7 +62,7 @@ __initialize_args(int* p_argc, char*** p_argv)
 // and we'll add them.
 
 int
-raise(int sig __attribute__((unused)))
+_raise(int sig __attribute__((unused)))
 {
   errno = ENOSYS;
   return -1;

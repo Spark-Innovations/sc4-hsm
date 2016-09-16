@@ -57,7 +57,7 @@ CFLAGS += -g3 -DDEBUG -DUSE_FULL_ASSERT -DSTM32F405xx -DUSE_HAL_DRIVER
 CFLAGS += -DHSE_VALUE=8000000
 CFLAGS+= $(INC)
 
-INC = -I./sc4 -I./lib -I./stm -I./tinyscheme 
+INC = -I./sc4 -I./lib -I./stm -I./tinyscheme -I./u2f -I./mbedtls/include
 
 LIBS= -lm -lc -specs=nosys.specs
 
@@ -74,6 +74,8 @@ SRC_C += $(wildcard ./lib/*.c)
 SRC_C += $(wildcard ./tinyscheme/*.c)
 SRC_C += $(wildcard ./stubs/*.c)
 SRC_C += $(wildcard ./sc4/*.c)
+SRC_C += $(wildcard ./mbedtls/library/*.c)
+SRC_C += $(wildcard ./u2f/*.c)
 
 OBJ = $(addprefix $(BUILD)/, $(SRC_ASM:.s=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_CPP:.cpp=.o))

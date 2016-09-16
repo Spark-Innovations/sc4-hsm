@@ -308,14 +308,23 @@ void loop() {
   printf("Ready\n");
 }
 
+void u2f_init();
+void u2f_main();
+
 int main() {
   sc4_hsm_init();
+  //  USBD_HID.Init (&hUsbDeviceFS, 0);
   set_led(YELLOW);
   lcd_print("\n Initializing...");
   _loadkey((u8*)FLASH_USER_START_ADDR);
   show_banner();
   set_led(GREEN);
-  delay(500);
+  delay(100);
   set_led(OFF);
+
+  // NOT WORKING
+  //  u2f_init();
+  //  u2f_main();
+
   while (1) loop();
 }

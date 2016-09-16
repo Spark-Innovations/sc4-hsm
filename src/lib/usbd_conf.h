@@ -73,6 +73,10 @@
 /*---------- -----------*/
 #define USBD_CDC_INTERVAL     1000
 
+// From U2F
+#define USBD_U2FHID_OUTREPORT_BUF_SIZE     64
+#define USBD_U2F_HID_REPORT_DESC_SIZE     34
+   
 /****************************************/
 /* #define for FS and HS identification */
 #define DEVICE_FS 		0
