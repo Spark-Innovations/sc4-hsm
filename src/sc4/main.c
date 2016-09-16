@@ -323,8 +323,9 @@ int main() {
   set_led(OFF);
 
   // NOT WORKING
-  //  u2f_init();
-  //  u2f_main();
+  u2f_init();
+  u2f_main();
 
+  // Dead code
   while (1) loop();
 }
