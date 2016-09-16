@@ -9,12 +9,11 @@
 
 ## System description
 
-The SC4-HSM is a prototype USB Hardware Secure Module based on the [STM32F415][1] microprocessor.  The features of this processor include:
+The SC4-HSM is a prototype USB Hardware Secure Module based on the [STM32F405RG][1] microprocessor.  The features of this processor include:
 
 + 1 MB flash memory
-+ 128 kB RAM
++ 192 kB SRAM
 + A hardware random-number generator (HWRNG)
-+ Dedicated cryptographic acceleration instructions (AES, 3-DES and SHA1)
 + Hardware memory readout protection (RDP)
 
 In addition, the SC4-HSM features a built-in 128x32 pixel monochrome OLED display, a tri-color LED, and two user pushbuttons.  It connects to a host processor via a USB2 port.
@@ -27,7 +26,7 @@ Software that has been successfully run on the SC4-HSM to date includes
 * [MicroPython](https://micropython.org)
 * [TinyScheme](http://tinyscheme.sourceforge.net/home.html)
 
-[1]: http://www.st.com/content/st_com/en/products/microcontrollers/stm32-32-bit-arm-cortex-mcus/stm32f4-series/stm32f405-415.html?querycriteria=productId=LN1035
+[1]: http://www.st.com/content/st_com/en/products/microcontrollers/stm32-32-bit-arm-cortex-mcus/stm32f4-series/stm32f405-415/stm32f405rg.html
 
 ## Getting started
 
