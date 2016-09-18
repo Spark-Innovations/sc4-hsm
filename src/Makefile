@@ -20,7 +20,7 @@ PYTHON = python
 CROSS_COMPILE = ~/devel/spark/sc4/gcc-arm/arm-none-eabi-
 
 AS = $(CROSS_COMPILE)as
-CC = $(CROSS_COMPILE)gcc -std=gnu11
+CC = $(CROSS_COMPILE)gcc
 CXX = $(CROSS_COMPILE)g++
 
 # NOTE: "-u _printf_float" is supposed to enable the %f printf directive
@@ -54,7 +54,7 @@ CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -c
 CFLAGS += -ffunction-sections -fdata-sections -ffreestanding
 CFLAGS += -fno-move-loop-invariants -Wall -Wextra  
 CFLAGS += -g3 -DDEBUG -DUSE_FULL_ASSERT -DSTM32F405xx -DUSE_HAL_DRIVER
-CFLAGS += -DHSE_VALUE=8000000
+CFLAGS += -DHSE_VALUE=8000000 -std=gnu11
 CFLAGS+= $(INC)
 
 INC = -I./sc4 -I./lib -I./stm -I./tinyscheme -I./u2f -I./mbedtls/include
