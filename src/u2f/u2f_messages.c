@@ -2,10 +2,12 @@
 #if 0 //defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
 #else
-//#include <stdio.h>
-#define mbedtls_printf uart_printf
+#include <stdio.h>
+#include "utils.h"
+#include <stdarg.h>
 #endif
-
+#undef mbedtls_printf
+#define mbedtls_printf lcd_printf
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/ecdsa.h"
@@ -32,6 +34,16 @@ static void dump_buf( const char *title, unsigned char *buf, size_t len )
             hex_digits[buf[i] % 16] );
     mbedtls_printf( "\n" );
 #endif
+}
+
+void lcd_printf ( const char * format, ... )
+{
+  char buffer[256];
+  va_list args;
+  va_start (args, format);
+  vsnprintf (buffer,256,format, args);
+  lcd_print (buffer);
+  va_end (args);
 }
 
 uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp, int flags, uint16_t *olen)

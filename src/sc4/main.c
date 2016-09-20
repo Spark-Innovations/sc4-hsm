@@ -308,7 +308,6 @@ void loop() {
   printf("Ready\n");
 }
 
-void u2f_init();
 void u2f_main();
 
 int main() {
@@ -323,7 +322,6 @@ int main() {
   set_led(OFF);
 
   // NOT WORKING
-  u2f_init();
   u2f_main();
 
   // Dead code

@@ -41,8 +41,10 @@
 #include "list.h"
 #include "endian.h"
 #include "uart_printf.h"
+#include "utils.h"
 
-#define d_printf uart_printf
+extern void lcd_printf ( const char * format, ... );
+#define d_printf lcd_printf
 
 
 /* Private typedef -----------------------------------------------------------*/
@@ -265,8 +267,11 @@ struct u2f_channel* u2f_channel_find(uint32_t cid)
     return NULL;
 }
 
+#include "hardware.h"
 static void u2f_response_error(uint8_t code)
 {
+	set_led(GREEN);
+	lcd_print("errrrrr");
 
 }
 
@@ -382,9 +387,11 @@ static void u2f_execute_init(struct u2f_channel *c)
     U2FHID_INIT_RESP *resp_init = (U2FHID_INIT_RESP *)c->data;
     struct u2f_channel *newc;
 
+    lcd_print("1");
     if (c->cid != 0xffffffff) {
          u2f_response_error(ERR_INVALID_PAR);
          //BUGBUG reset
+         lcd_print("2");
          return;
     }
 
@@ -392,8 +399,10 @@ static void u2f_execute_init(struct u2f_channel *c)
     if (!newc) {
          u2f_response_error(ERR_OTHER);
          //BUGBUG reset
+            lcd_print("3");
          return;
     }
+    lcd_print("4");
     u2f_channel_init(newc, MAX_U2F_BUFSIZE, g_cid++);
 
     /* Nonce is already at same location, no need to copy */
@@ -404,7 +413,9 @@ static void u2f_execute_init(struct u2f_channel *c)
     resp_init->versionBuild = 0;                    // Build version number
     resp_init->capFlags = CAPFLAG_WINK;             // Capabilities flags
 
+    lcd_print("5");
     USBD_U2F_HID_SendResponse(&hUsbDeviceFS, c->cid, c->cmd, (uint8_t *)resp_init, sizeof(*resp_init));
+    lcd_print("6");
 }
 
 static void u2f_execute_wink(struct u2f_channel *c)
@@ -422,25 +433,25 @@ static void u2f_execute_command(struct u2f_channel *c)
     switch(c->cmd)
     {
     case U2FHID_PING: // Echo data through local processor only
-        d_printf("U2FHID_PING\n");
+        lcd_print("U2FHID_PING\n");
         return u2f_execute_ping(c);
     case U2FHID_MSG:  // Send U2F message frame
-        d_printf("U2FHID_MSG\n");
+        lcd_print("U2FHID_MSG\n");
         return u2f_execute_msg(c);
     case U2FHID_LOCK: // Send lock channel command
-        d_printf("U2FHID_LOCK\n");
+        lcd_print("U2FHID_LOCK\n");
         return u2f_execute_lock(c);
     case U2FHID_INIT: // Channel initialization
-        d_printf("U2FHID_INIT\n");
+        lcd_print("U2FHID_INIT\n");
         return u2f_execute_init(c);
     case U2FHID_WINK: // Send device identification wink
-        d_printf("U2FHID_WINK\n");
+        lcd_print("U2FHID_WINK\n");
         return u2f_execute_wink(c);
     case U2FHID_SYNC: // Protocol resync command
-        d_printf("U2FHID_SYNC\n");
+        lcd_print("U2FHID_SYNC\n");
         return u2f_execute_sync(c);
     case U2FHID_VENDOR_FIRST: // First vendor defined command
-        d_printf("U2FHID_VENDOR_FIRST\n");
+        lcd_print("U2FHID_VENDOR_FIRST\n");
         break;
     default:
         d_printf("unk command!\n");
@@ -452,8 +463,11 @@ void u2f_channel_process_ready() {
   struct list_head *p, *n;
   list_for_each_safe(p, n, &ready_list_head) {
     struct u2f_channel *c = list_entry(p, struct u2f_channel, ready);
+    lcd_print(">cmd");
     u2f_execute_command(c);
+    lcd_print("<cmd");
     list_del(&c->ready);
+    lcd_print("<<cmd");
     c->state = CID_STATE_IDLE;
   }
 }
@@ -462,10 +476,12 @@ static int8_t u2f_channel_recv_frame(struct u2f_channel *c, U2FHID_FRAME *frame)
 {
     uint16_t copy;
 
+    lcd_print("recv");
     if (FRAME_TYPE(*frame) == TYPE_INIT) {
         if (c->state != CID_STATE_IDLE) {
             u2f_response_error(ERR_INVALID_PAR);
             //BUGBUG reset
+            lcd_print("rrrr");
             return (0);
         }
 
@@ -475,7 +491,9 @@ static int8_t u2f_channel_recv_frame(struct u2f_channel *c, U2FHID_FRAME *frame)
         c->expire = HAL_GetTick() + U2FHID_TRANS_TIMEOUT;
         c->state = CID_STATE_RECV;
         c->bcnt_current = copy = MIN(c->bcnt_total, sizeof(frame->init.data));
+        lcd_print("recv1");
         USBD_memcpy(c->data, frame->init.data, copy);
+        lcd_printf("recv1!=%d %d", copy, c->bcnt_total);
     } else if (FRAME_TYPE(*frame) == TYPE_CONT) {
         if (c->state != CID_STATE_RECV) {
             u2f_response_error(ERR_INVALID_PAR);
@@ -486,7 +504,9 @@ static int8_t u2f_channel_recv_frame(struct u2f_channel *c, U2FHID_FRAME *frame)
             return (0);
         }
         copy = MIN(c->bcnt_total - c->bcnt_current, sizeof(frame->cont.data));
+        lcd_print("recv2");
         USBD_memcpy(c->data + c->bcnt_current, frame->cont.data, copy);
+        lcd_print("recv2!");
         c->bcnt_current += copy;
     } else {
         u2f_response_error(ERR_INVALID_PAR);
@@ -497,9 +517,12 @@ static int8_t u2f_channel_recv_frame(struct u2f_channel *c, U2FHID_FRAME *frame)
         c->bcnt_current == c->bcnt_total) {
         c->state = CID_STATE_READY;
         d_printf("channel %d ready\n", c->cid);
+        lcd_print("chan ready");
         list_add_tail(&c->ready, &ready_list_head);
+        lcd_print("chan ready2");
     }
 
+    lcd_print("<recv");
     return (0);
 }
 
@@ -527,8 +550,6 @@ static int8_t U2F_HID_OutEvent_FS  (uint8_t *data, uint16_t len)
     }
 
     return u2f_channel_recv_frame(c, frame);
-
-    return (0);
 }
 
 /**

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#if 0
 extern UART_HandleTypeDef huart4;
 
 // FIXME - temporary hack for SC4-HSM
@@ -24,6 +25,7 @@ void uart_printf(const char *fmt, ...) {
     if (ret > 0) {
         if(buffer[ret-1] == '\n')
             buffer[ret++] = '\r';
-        HAL_UART_Transmit(&huart4, (uint8_t*)buffer, ret, 0xFFFF);
+        //HAL_UART_Transmit(&huart4, (uint8_t*)buffer, ret, 0xFFFF);
     }
 }
+#endif
