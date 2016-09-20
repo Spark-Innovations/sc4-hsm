@@ -7,22 +7,25 @@
   * @brief   This file provides the U2F_HID core functions.
   *
   * @verbatim
-  *      
-  *          ===================================================================      
+  *
+  *          ===================================================================
   *                                U2F_HID Class  Description
-  *          =================================================================== 
-  *           This module manages the U2F_HID class V1.11 following the "Device Class Definition
+  *          ===================================================================
+  *           This module manages the U2F_HID class V1.11 following the "Device
+  *Class Definition
   *           for Human Interface Devices (U2F_HID) Version 1.11 Jun 27, 2001".
   *           This driver implements the following aspects of the specification:
   *             - The Boot Interface Subclass
   *             - Usage Page : Generic Desktop
   *             - Usage : Vendor
-  *             - Collection : Application 
-  *      
-  * @note     In HS mode and when the DMA is used, all variables and data structures
-  *           dealing with the DMA during the transaction process should be 32-bit aligned.
-  *           
-  *      
+  *             - Collection : Application
+  *
+  * @note     In HS mode and when the DMA is used, all variables and data
+  *structures
+  *           dealing with the DMA during the transaction process should be
+  *32-bit aligned.
+  *
+  *
   *  @endverbatim
   *
   ******************************************************************************
@@ -36,198 +39,182 @@
   *
   *        http://www.st.com/software_license_agreement_liberty_v2
   *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
+  * Unless required by applicable law or agreed to in writing, software
+  * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
   * See the License for the specific language governing permissions and
   * limitations under the License.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_u2fhid.h"
-#include "usbd_desc.h"
 #include "usbd_ctlreq.h"
-
+#include "usbd_desc.h"
 
 /** @addtogroup STM32_USB_DEVICE_LIBRARY
   * @{
   */
 
-
-/** @defgroup USBD_U2F_HID 
+/** @defgroup USBD_U2F_HID
   * @brief usbd core module
   * @{
-  */ 
+  */
 
 /** @defgroup USBD_U2F_HID_Private_TypesDefinitions
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
-
+  */
 
 /** @defgroup USBD_U2F_HID_Private_Defines
   * @{
-  */ 
+  */
 
 /**
   * @}
-  */ 
-
+  */
 
 /** @defgroup USBD_U2F_HID_Private_Macros
   * @{
-  */ 
+  */
 /**
   * @}
-  */ 
+  */
 /** @defgroup USBD_U2F_HID_Private_FunctionPrototypes
   * @{
   */
 
+static uint8_t USBD_U2F_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
 
-static uint8_t  USBD_U2F_HID_Init (USBD_HandleTypeDef *pdev, 
-                               uint8_t cfgidx);
+static uint8_t USBD_U2F_HID_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx);
 
-static uint8_t  USBD_U2F_HID_DeInit (USBD_HandleTypeDef *pdev, 
-                                 uint8_t cfgidx);
+static uint8_t USBD_U2F_HID_Setup(USBD_HandleTypeDef *pdev,
+                                  USBD_SetupReqTypedef *req);
 
-static uint8_t  USBD_U2F_HID_Setup (USBD_HandleTypeDef *pdev, 
-                                USBD_SetupReqTypedef *req);
+static uint8_t *USBD_U2F_HID_GetCfgDesc(uint16_t *length);
 
-static uint8_t  *USBD_U2F_HID_GetCfgDesc (uint16_t *length);
+static uint8_t *USBD_U2F_HID_GetDeviceQualifierDesc(uint16_t *length);
 
-static uint8_t  *USBD_U2F_HID_GetDeviceQualifierDesc (uint16_t *length);
+static uint8_t USBD_U2F_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum);
 
-static uint8_t  USBD_U2F_HID_DataIn (USBD_HandleTypeDef *pdev, uint8_t epnum);
-
-static uint8_t  USBD_U2F_HID_DataOut (USBD_HandleTypeDef *pdev, uint8_t epnum);
-static uint8_t  USBD_U2F_HID_EP0_RxReady (USBD_HandleTypeDef  *pdev);
+static uint8_t USBD_U2F_HID_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum);
+static uint8_t USBD_U2F_HID_EP0_RxReady(USBD_HandleTypeDef *pdev);
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup USBD_U2F_HID_Private_Variables
   * @{
-  */ 
+  */
 
-USBD_ClassTypeDef  USBD_U2F_HID = 
-{
-  USBD_U2F_HID_Init,
-  USBD_U2F_HID_DeInit,
-  USBD_U2F_HID_Setup,
-  NULL, /*EP0_TxSent*/  
-  USBD_U2F_HID_EP0_RxReady, /*EP0_RxReady*/ /* STATUS STAGE IN */
-  USBD_U2F_HID_DataIn, /*DataIn*/
-  USBD_U2F_HID_DataOut,
-  NULL, /*SOF */
-  NULL,
-  NULL,      
-  USBD_U2F_HID_GetCfgDesc,
-  USBD_U2F_HID_GetCfgDesc, 
-  USBD_U2F_HID_GetCfgDesc,
-  USBD_U2F_HID_GetDeviceQualifierDesc,
+USBD_ClassTypeDef USBD_U2F_HID = {
+    USBD_U2F_HID_Init, USBD_U2F_HID_DeInit, USBD_U2F_HID_Setup,
+    NULL,                                     /*EP0_TxSent*/
+    USBD_U2F_HID_EP0_RxReady, /*EP0_RxReady*/ /* STATUS STAGE IN */
+    USBD_U2F_HID_DataIn,                      /*DataIn*/
+    USBD_U2F_HID_DataOut, NULL,               /*SOF */
+    NULL, NULL, USBD_U2F_HID_GetCfgDesc, USBD_U2F_HID_GetCfgDesc,
+    USBD_U2F_HID_GetCfgDesc, USBD_U2F_HID_GetDeviceQualifierDesc,
 };
 
 /* USB U2F_HID device Configuration Descriptor */
-__ALIGN_BEGIN static uint8_t USBD_U2F_HID_CfgDesc[USB_U2F_HID_CONFIG_DESC_SIZ] __ALIGN_END =
-{
-  0x09, /* bLength: Configuration Descriptor size */
-  USB_DESC_TYPE_CONFIGURATION, /* bDescriptorType: Configuration */
-  USB_U2F_HID_CONFIG_DESC_SIZ,
-  /* wTotalLength: Bytes returned */
-  0x00,
-  0x01,         /*bNumInterfaces: 1 interface*/
-  0x01,         /*bConfigurationValue: Configuration value*/
-  0x00,         /*iConfiguration: Index of string descriptor describing
-  the configuration*/
-  0x80,         /*bmAttributes: bus powered */
-  0x32,         /*MaxPower 100 mA: this current is used for detecting Vbus*/
-  
-  /************** Descriptor of U2F HID interface ****************/
-  /* 09 */
-  0x09,         /*bLength: Interface Descriptor size*/
-  USB_DESC_TYPE_INTERFACE,/*bDescriptorType: Interface descriptor type*/
-  0x00,         /*bInterfaceNumber: Number of Interface*/
-  0x00,         /*bAlternateSetting: Alternate setting*/
-  0x02,         /*bNumEndpoints*/
-  0x03,         /*bInterfaceClass: U2F_HID*/
-  0x00,         /*bInterfaceSubClass : 1=BOOT, 0=no boot*/
-  0x00,         /*nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse*/
-  0,            /*iInterface: Index of string descriptor*/
-  /******************** Descriptor of U2F_HID *************************/
-  /* 18 */
-  0x09,         /*bLength: U2F_HID Descriptor size*/
-  U2F_HID_DESCRIPTOR_TYPE, /*bDescriptorType: U2F_HID*/
-  0x10,         /*bU2F_HIDUSTOM_HID: U2F_HID Class Spec release number*/
-  0x01,
-  0x00,         /*bCountryCode: Hardware target country*/
-  0x01,         /*bNumDescriptors: Number of U2F_HID class descriptors to follow*/
-  0x22,         /*bDescriptorType*/
-  USBD_U2F_HID_REPORT_DESC_SIZE,/*wItemLength: Total length of Report descriptor*/
-  0x00,
-  /******************** Descriptor of Custom HID endpoints ********************/
-  /* 27 */
-  0x07,          /*bLength: Endpoint Descriptor size*/
-  USB_DESC_TYPE_ENDPOINT, /*bDescriptorType:*/
-  
-  U2F_HID_EPIN_ADDR,     /*bEndpointAddress: Endpoint Address (IN)*/
-  0x03,          /*bmAttributes: Interrupt endpoint*/
-  U2F_HID_EPIN_SIZE, /*wMaxPacketSize: 2 Byte max */
-  0x00,
-  0x5,          /*bInterval: Polling Interval (5 ms)*/
-  /* 34 */
-  
-  0x07,	         /* bLength: Endpoint Descriptor size */
-  USB_DESC_TYPE_ENDPOINT,	/* bDescriptorType: */
-  U2F_HID_EPOUT_ADDR,  /*bEndpointAddress: Endpoint Address (OUT)*/
-  0x03,	/* bmAttributes: Interrupt endpoint */
-  U2F_HID_EPOUT_SIZE,	/* wMaxPacketSize: 2 Bytes max  */
-  0x00,
-  0x5,	/* bInterval: Polling Interval (5 ms) */
-  /* 41 */
-} ;
+__ALIGN_BEGIN static uint8_t
+    USBD_U2F_HID_CfgDesc[USB_U2F_HID_CONFIG_DESC_SIZ] __ALIGN_END = {
+        0x09, /* bLength: Configuration Descriptor size */
+        USB_DESC_TYPE_CONFIGURATION, /* bDescriptorType: Configuration */
+        USB_U2F_HID_CONFIG_DESC_SIZ,
+        /* wTotalLength: Bytes returned */
+        0x00, 0x01, /*bNumInterfaces: 1 interface*/
+        0x01,       /*bConfigurationValue: Configuration value*/
+        0x00,       /*iConfiguration: Index of string descriptor describing
+      the configuration*/
+        0x80,       /*bmAttributes: bus powered */
+        0x32,       /*MaxPower 100 mA: this current is used for detecting Vbus*/
+
+        /************** Descriptor of U2F HID interface ****************/
+        /* 09 */
+        0x09,                    /*bLength: Interface Descriptor size*/
+        USB_DESC_TYPE_INTERFACE, /*bDescriptorType: Interface descriptor type*/
+        0x00,                    /*bInterfaceNumber: Number of Interface*/
+        0x00,                    /*bAlternateSetting: Alternate setting*/
+        0x02,                    /*bNumEndpoints*/
+        0x03,                    /*bInterfaceClass: U2F_HID*/
+        0x00,                    /*bInterfaceSubClass : 1=BOOT, 0=no boot*/
+        0x00, /*nInterfaceProtocol : 0=none, 1=keyboard, 2=mouse*/
+        0,    /*iInterface: Index of string descriptor*/
+        /******************** Descriptor of U2F_HID *************************/
+        /* 18 */
+        0x09,                    /*bLength: U2F_HID Descriptor size*/
+        U2F_HID_DESCRIPTOR_TYPE, /*bDescriptorType: U2F_HID*/
+        0x10,       /*bU2F_HIDUSTOM_HID: U2F_HID Class Spec release number*/
+        0x01, 0x00, /*bCountryCode: Hardware target country*/
+        0x01, /*bNumDescriptors: Number of U2F_HID class descriptors to follow*/
+        0x22, /*bDescriptorType*/
+        USBD_U2F_HID_REPORT_DESC_SIZE, /*wItemLength: Total length of Report
+                                          descriptor*/
+        0x00,
+        /******************** Descriptor of Custom HID endpoints
+           ********************/
+        /* 27 */
+        0x07,                   /*bLength: Endpoint Descriptor size*/
+        USB_DESC_TYPE_ENDPOINT, /*bDescriptorType:*/
+
+        U2F_HID_EPIN_ADDR, /*bEndpointAddress: Endpoint Address (IN)*/
+        0x03,              /*bmAttributes: Interrupt endpoint*/
+        U2F_HID_EPIN_SIZE, /*wMaxPacketSize: 2 Byte max */
+        0x00,
+        0x5, /*bInterval: Polling Interval (5 ms)*/
+        /* 34 */
+
+        0x07,                   /* bLength: Endpoint Descriptor size */
+        USB_DESC_TYPE_ENDPOINT, /* bDescriptorType: */
+        U2F_HID_EPOUT_ADDR,     /*bEndpointAddress: Endpoint Address (OUT)*/
+        0x03,                   /* bmAttributes: Interrupt endpoint */
+        U2F_HID_EPOUT_SIZE,     /* wMaxPacketSize: 2 Bytes max  */
+        0x00, 0x5,              /* bInterval: Polling Interval (5 ms) */
+        /* 41 */
+};
 
 /* USB U2F_HID device Configuration Descriptor */
-__ALIGN_BEGIN static uint8_t USBD_U2F_HID_Desc[USB_U2F_HID_DESC_SIZ] __ALIGN_END =
-{
-  /* 18 */
-  0x09,         /*bLength: U2F_HID Descriptor size*/
-  U2F_HID_DESCRIPTOR_TYPE, /*bDescriptorType: U2F_HID*/
-  0x11,         /*bU2F_HIDUSTOM_HID: U2F_HID Class Spec release number*/
-  0x01,
-  0x00,         /*bCountryCode: Hardware target country*/
-  0x01,         /*bNumDescriptors: Number of U2F_HID class descriptors to follow*/
-  0x22,         /*bDescriptorType*/
-  USBD_U2F_HID_REPORT_DESC_SIZE,/*wItemLength: Total length of Report descriptor*/
-  0x00,
+__ALIGN_BEGIN static uint8_t
+    USBD_U2F_HID_Desc[USB_U2F_HID_DESC_SIZ] __ALIGN_END = {
+        /* 18 */
+        0x09,                    /*bLength: U2F_HID Descriptor size*/
+        U2F_HID_DESCRIPTOR_TYPE, /*bDescriptorType: U2F_HID*/
+        0x11,       /*bU2F_HIDUSTOM_HID: U2F_HID Class Spec release number*/
+        0x01, 0x00, /*bCountryCode: Hardware target country*/
+        0x01, /*bNumDescriptors: Number of U2F_HID class descriptors to follow*/
+        0x22, /*bDescriptorType*/
+        USBD_U2F_HID_REPORT_DESC_SIZE, /*wItemLength: Total length of Report
+                                          descriptor*/
+        0x00,
 };
 
 /* USB Standard Device Descriptor */
-__ALIGN_BEGIN static uint8_t USBD_U2F_HID_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALIGN_END =
-{
-  USB_LEN_DEV_QUALIFIER_DESC,
-  USB_DESC_TYPE_DEVICE_QUALIFIER,
-  0x00,
-  0x02,
-  0x00,
-  0x00,
-  0x00,
-  0x40,
-  0x01,
-  0x00,
+__ALIGN_BEGIN static uint8_t
+    USBD_U2F_HID_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALIGN_END = {
+        USB_LEN_DEV_QUALIFIER_DESC,
+        USB_DESC_TYPE_DEVICE_QUALIFIER,
+        0x00,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x40,
+        0x01,
+        0x00,
 };
 
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup USBD_U2F_HID_Private_Functions
   * @{
-  */ 
+  */
 
 /**
   * @brief  USBD_U2F_HID_Init
@@ -236,40 +223,30 @@ __ALIGN_BEGIN static uint8_t USBD_U2F_HID_DeviceQualifierDesc[USB_LEN_DEV_QUALIF
   * @param  cfgidx: Configuration index
   * @retval status
   */
-static uint8_t  USBD_U2F_HID_Init (USBD_HandleTypeDef *pdev, 
-                               uint8_t cfgidx)
-{
+static uint8_t USBD_U2F_HID_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx) {
   uint8_t ret = 0;
-  USBD_U2F_HID_HandleTypeDef     *hhid;
+  USBD_U2F_HID_HandleTypeDef *hhid;
   /* Open EP IN */
-  USBD_LL_OpenEP(pdev,
-                 U2F_HID_EPIN_ADDR,
-                 USBD_EP_TYPE_INTR,
-                 U2F_HID_EPIN_SIZE);  
-  
+  USBD_LL_OpenEP(pdev, U2F_HID_EPIN_ADDR, USBD_EP_TYPE_INTR, U2F_HID_EPIN_SIZE);
+
   /* Open EP OUT */
-  USBD_LL_OpenEP(pdev,
-                 U2F_HID_EPOUT_ADDR,
-                 USBD_EP_TYPE_INTR,
+  USBD_LL_OpenEP(pdev, U2F_HID_EPOUT_ADDR, USBD_EP_TYPE_INTR,
                  U2F_HID_EPOUT_SIZE);
-  
-  pdev->pClassData = USBD_malloc(sizeof (USBD_U2F_HID_HandleTypeDef));
-  
-  if(pdev->pClassData == NULL)
-  {
-    ret = 1; 
-  }
-  else
-  {
-    hhid = (USBD_U2F_HID_HandleTypeDef*) pdev->pClassData;
-      
+
+  pdev->pClassData = USBD_malloc(sizeof(USBD_U2F_HID_HandleTypeDef));
+
+  if (pdev->pClassData == NULL) {
+    ret = 1;
+  } else {
+    hhid = (USBD_U2F_HID_HandleTypeDef *)pdev->pClassData;
+
     hhid->state = U2F_HID_IDLE;
     ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->Init();
-          /* Prepare Out endpoint to receive 1st packet */ 
-    USBD_LL_PrepareReceive(pdev, U2F_HID_EPOUT_ADDR, hhid->Report_buf, 
+    /* Prepare Out endpoint to receive 1st packet */
+    USBD_LL_PrepareReceive(pdev, U2F_HID_EPOUT_ADDR, hhid->Report_buf,
                            USBD_U2FHID_OUTREPORT_BUF_SIZE);
   }
-    
+
   return ret;
 }
 
@@ -280,20 +257,15 @@ static uint8_t  USBD_U2F_HID_Init (USBD_HandleTypeDef *pdev,
   * @param  cfgidx: Configuration index
   * @retval status
   */
-static uint8_t  USBD_U2F_HID_DeInit (USBD_HandleTypeDef *pdev, 
-                                 uint8_t cfgidx)
-{
+static uint8_t USBD_U2F_HID_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx) {
   /* Close U2F_HID EP IN */
-  USBD_LL_CloseEP(pdev,
-                  U2F_HID_EPIN_ADDR);
-  
+  USBD_LL_CloseEP(pdev, U2F_HID_EPIN_ADDR);
+
   /* Close U2F_HID EP OUT */
-  USBD_LL_CloseEP(pdev,
-                  U2F_HID_EPOUT_ADDR);
-  
+  USBD_LL_CloseEP(pdev, U2F_HID_EPOUT_ADDR);
+
   /* FRee allocated memory */
-  if(pdev->pClassData != NULL)
-  {
+  if (pdev->pClassData != NULL) {
     ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->DeInit();
     USBD_free(pdev->pClassData);
     pdev->pClassData = NULL;
@@ -308,79 +280,64 @@ static uint8_t  USBD_U2F_HID_DeInit (USBD_HandleTypeDef *pdev,
   * @param  req: usb requests
   * @retval status
   */
-static uint8_t  USBD_U2F_HID_Setup (USBD_HandleTypeDef *pdev, 
-                                USBD_SetupReqTypedef *req)
-{
+static uint8_t USBD_U2F_HID_Setup(USBD_HandleTypeDef *pdev,
+                                  USBD_SetupReqTypedef *req) {
   uint16_t len = 0;
-  uint8_t  *pbuf = NULL;
-  USBD_U2F_HID_HandleTypeDef     *hhid = (USBD_U2F_HID_HandleTypeDef*)pdev->pClassData;
+  uint8_t *pbuf = NULL;
+  USBD_U2F_HID_HandleTypeDef *hhid =
+      (USBD_U2F_HID_HandleTypeDef *)pdev->pClassData;
 
-  switch (req->bmRequest & USB_REQ_TYPE_MASK)
-  {
-  case USB_REQ_TYPE_CLASS :  
-    switch (req->bRequest)
-    {
-      
-      
+  switch (req->bmRequest & USB_REQ_TYPE_MASK) {
+  case USB_REQ_TYPE_CLASS:
+    switch (req->bRequest) {
+
     case U2F_HID_REQ_SET_PROTOCOL:
       hhid->Protocol = (uint8_t)(req->wValue);
       break;
-      
+
     case U2F_HID_REQ_GET_PROTOCOL:
-      USBD_CtlSendData (pdev, 
-                        (uint8_t *)&hhid->Protocol,
-                        1);    
+      USBD_CtlSendData(pdev, (uint8_t *)&hhid->Protocol, 1);
       break;
-      
+
     case U2F_HID_REQ_SET_IDLE:
       hhid->IdleState = (uint8_t)(req->wValue >> 8);
       break;
-      
+
     case U2F_HID_REQ_GET_IDLE:
-      USBD_CtlSendData (pdev, 
-                        (uint8_t *)&hhid->IdleState,
-                        1);        
-      break;      
-    
+      USBD_CtlSendData(pdev, (uint8_t *)&hhid->IdleState, 1);
+      break;
+
     case U2F_HID_REQ_SET_REPORT:
       hhid->IsReportAvailable = 1;
-      USBD_CtlPrepareRx (pdev, hhid->Report_buf, (uint8_t)(req->wLength));
-      
+      USBD_CtlPrepareRx(pdev, hhid->Report_buf, (uint8_t)(req->wLength));
+
       break;
     default:
-      USBD_CtlError (pdev, req);
-      return USBD_FAIL; 
+      USBD_CtlError(pdev, req);
+      return USBD_FAIL;
     }
     break;
-    
+
   case USB_REQ_TYPE_STANDARD:
-    switch (req->bRequest)
-    {
-    case USB_REQ_GET_DESCRIPTOR: 
-      if( req->wValue >> 8 == U2F_HID_REPORT_DESC)
-      {
-        len = MIN(USBD_U2F_HID_REPORT_DESC_SIZE , req->wLength);
-        pbuf =  ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->pReport;
+    switch (req->bRequest) {
+    case USB_REQ_GET_DESCRIPTOR:
+      if (req->wValue >> 8 == U2F_HID_REPORT_DESC) {
+        len = MIN(USBD_U2F_HID_REPORT_DESC_SIZE, req->wLength);
+        pbuf = ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->pReport;
+      } else if (req->wValue >> 8 == U2F_HID_DESCRIPTOR_TYPE) {
+        pbuf = USBD_U2F_HID_Desc;
+        len = MIN(USB_U2F_HID_DESC_SIZ, req->wLength);
       }
-      else if( req->wValue >> 8 == U2F_HID_DESCRIPTOR_TYPE)
-      {
-        pbuf = USBD_U2F_HID_Desc;   
-        len = MIN(USB_U2F_HID_DESC_SIZ , req->wLength);
-      }
-      
-      USBD_CtlSendData (pdev, 
-                        pbuf,
-                        len);
-      
+
+      USBD_CtlSendData(pdev, pbuf, len);
+
       break;
-      
-    case USB_REQ_GET_INTERFACE :
-      USBD_CtlSendData (pdev,
-                        (uint8_t *)&hhid->AltSetting,
-                        1);
+
+    case USB_REQ_GET_INTERFACE:
+      USBD_CtlSendData(pdev, (uint8_t *)&hhid->AltSetting, 1);
       break;
-      
-    case USB_REQ_SET_INTERFACE :
+
+    case USB_REQ_SET_INTERFACE:
       hhid->AltSetting = (uint8_t)(req->wValue);
       break;
     }
@@ -389,42 +346,35 @@ static uint8_t  USBD_U2F_HID_Setup (USBD_HandleTypeDef *pdev,
 }
 
 /**
-  * @brief  USBD_U2F_HID_SendReport 
+  * @brief  USBD_U2F_HID_SendReport
   *         Send U2F_HID Report
   * @param  pdev: device instance
   * @param  buff: pointer to report
   * @retval status
   */
-uint8_t USBD_U2F_HID_SendReport     (USBD_HandleTypeDef  *pdev, 
-                                 uint8_t *report,
-                                 uint16_t len)
-{
-  USBD_U2F_HID_HandleTypeDef     *hhid = (USBD_U2F_HID_HandleTypeDef*)pdev->pClassData;
-  
-  if (pdev->dev_state == USBD_STATE_CONFIGURED )
-  {
-    if(hhid->state == U2F_HID_IDLE)
-    {
+uint8_t USBD_U2F_HID_SendReport(USBD_HandleTypeDef *pdev, uint8_t *report,
+                                uint16_t len) {
+  USBD_U2F_HID_HandleTypeDef *hhid =
+      (USBD_U2F_HID_HandleTypeDef *)pdev->pClassData;
+
+  if (pdev->dev_state == USBD_STATE_CONFIGURED) {
+    if (hhid->state == U2F_HID_IDLE) {
       hhid->state = U2F_HID_BUSY;
-      USBD_LL_Transmit (pdev, 
-                        U2F_HID_EPIN_ADDR,                                      
-                        report,
-                        len);
+      USBD_LL_Transmit(pdev, U2F_HID_EPIN_ADDR, report, len);
     }
   }
   return USBD_OK;
 }
 
 /**
-  * @brief  USBD_U2F_HID_GetCfgDesc 
+  * @brief  USBD_U2F_HID_GetCfgDesc
   *         return configuration descriptor
   * @param  speed : current device speed
   * @param  length : pointer data length
   * @retval pointer to descriptor buffer
   */
-static uint8_t  *USBD_U2F_HID_GetCfgDesc (uint16_t *length)
-{
-  *length = sizeof (USBD_U2F_HID_CfgDesc);
+static uint8_t *USBD_U2F_HID_GetCfgDesc(uint16_t *length) {
+  *length = sizeof(USBD_U2F_HID_CfgDesc);
   return USBD_U2F_HID_CfgDesc;
 }
 
@@ -435,11 +385,9 @@ static uint8_t  *USBD_U2F_HID_GetCfgDesc (uint16_t *length)
   * @param  epnum: endpoint index
   * @retval status
   */
-static uint8_t  USBD_U2F_HID_DataIn (USBD_HandleTypeDef *pdev, 
-                              uint8_t epnum)
-{
-  
-  /* Ensure that the FIFO is empty before a new transfer, this condition could 
+static uint8_t USBD_U2F_HID_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum) {
+
+  /* Ensure that the FIFO is empty before a new transfer, this condition could
   be caused by  a new transfer before the end of the previous transfer */
   ((USBD_U2F_HID_HandleTypeDef *)pdev->pClassData)->state = U2F_HID_IDLE;
 
@@ -453,16 +401,15 @@ static uint8_t  USBD_U2F_HID_DataIn (USBD_HandleTypeDef *pdev,
   * @param  epnum: endpoint index
   * @retval status
   */
-static uint8_t  USBD_U2F_HID_DataOut (USBD_HandleTypeDef *pdev, 
-                              uint8_t epnum)
-{
+static uint8_t USBD_U2F_HID_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum) {
   uint16_t len;
-  USBD_U2F_HID_HandleTypeDef     *hhid = (USBD_U2F_HID_HandleTypeDef*)pdev->pClassData;  
-  
+  USBD_U2F_HID_HandleTypeDef *hhid =
+      (USBD_U2F_HID_HandleTypeDef *)pdev->pClassData;
+
   len = USBD_GetRxCount(pdev, U2F_HID_EPOUT_ADDR);
   ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf, len);
-    
-  USBD_LL_PrepareReceive(pdev, U2F_HID_EPOUT_ADDR , hhid->Report_buf, 
+
+  USBD_LL_PrepareReceive(pdev, U2F_HID_EPOUT_ADDR, hhid->Report_buf,
                          USBD_U2FHID_OUTREPORT_BUF_SIZE);
 
   return USBD_OK;
@@ -474,29 +421,28 @@ static uint8_t  USBD_U2F_HID_DataOut (USBD_HandleTypeDef *pdev,
   * @param  pdev: device instance
   * @retval status
   */
-uint8_t USBD_U2F_HID_EP0_RxReady(USBD_HandleTypeDef *pdev)
-{
-  USBD_U2F_HID_HandleTypeDef     *hhid = (USBD_U2F_HID_HandleTypeDef*)pdev->pClassData;  
+uint8_t USBD_U2F_HID_EP0_RxReady(USBD_HandleTypeDef *pdev) {
+  USBD_U2F_HID_HandleTypeDef *hhid =
+      (USBD_U2F_HID_HandleTypeDef *)pdev->pClassData;
 
-  if (hhid->IsReportAvailable == 1)
-  {
-	uint16_t len = USBD_GetRxCount(pdev, 0);
-    ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf, len);
-    hhid->IsReportAvailable = 0;      
+  if (hhid->IsReportAvailable == 1) {
+    uint16_t len = USBD_GetRxCount(pdev, 0);
+    ((USBD_U2F_HID_ItfTypeDef *)pdev->pUserData)
+        ->OutEvent(hhid->Report_buf, len);
+    hhid->IsReportAvailable = 0;
   }
 
   return USBD_OK;
 }
 
 /**
-* @brief  DeviceQualifierDescriptor 
+* @brief  DeviceQualifierDescriptor
 *         return Device Qualifier descriptor
 * @param  length : pointer data length
 * @retval pointer to descriptor buffer
 */
-static uint8_t  *USBD_U2F_HID_GetDeviceQualifierDesc (uint16_t *length)
-{
-  *length = sizeof (USBD_U2F_HID_DeviceQualifierDesc);
+static uint8_t *USBD_U2F_HID_GetDeviceQualifierDesc(uint16_t *length) {
+  *length = sizeof(USBD_U2F_HID_DeviceQualifierDesc);
   return USBD_U2F_HID_DeviceQualifierDesc;
 }
 
@@ -506,31 +452,27 @@ static uint8_t  *USBD_U2F_HID_GetDeviceQualifierDesc (uint16_t *length)
   * @param  fops: U2FHID Interface callback
   * @retval status
   */
-uint8_t  USBD_U2F_HID_RegisterInterface  (USBD_HandleTypeDef   *pdev, 
-                                             USBD_U2F_HID_ItfTypeDef *fops)
-{
-  uint8_t  ret = USBD_FAIL;
-  
-  if(fops != NULL)
-  {
-    pdev->pUserData= fops;
-    ret = USBD_OK;    
+uint8_t USBD_U2F_HID_RegisterInterface(USBD_HandleTypeDef *pdev,
+                                       USBD_U2F_HID_ItfTypeDef *fops) {
+  uint8_t ret = USBD_FAIL;
+
+  if (fops != NULL) {
+    pdev->pUserData = fops;
+    ret = USBD_OK;
   }
-  
+
   return ret;
 }
 /**
   * @}
-  */ 
-
-
-/**
-  * @}
-  */ 
-
+  */
 
 /**
   * @}
-  */ 
+  */
+
+/**
+  * @}
+  */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

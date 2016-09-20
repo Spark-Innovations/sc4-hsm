@@ -1,7 +1,7 @@
-#include "stm32f4xx_hal.h"
 #include "uart_printf.h"
-#include <stdio.h>
+#include "stm32f4xx_hal.h"
 #include <stdarg.h>
+#include <stdio.h>
 
 #if 0
 extern UART_HandleTypeDef huart4;
