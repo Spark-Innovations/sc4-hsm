@@ -102,8 +102,7 @@ void OTG_FS_IRQHandler(void) {
 /**
 * @brief This function handles Non maskable interrupt.
 */
-void NMI_Handler(void)
-{
+void NMI_Handler(void) {
   /* USER CODE BEGIN NonMaskableInt_IRQn 0 */
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
@@ -115,15 +114,13 @@ void NMI_Handler(void)
 /**
 * @brief This function handles Hard fault interrupt.
 */
-void HardFault_Handler(void)
-{
+void HardFault_Handler(void) {
   lcd_print("HARDFault_Handler");
   set_led(OFF);
   /* USER CODE BEGIN HardFault_IRQn 0 */
 
   /* USER CODE END HardFault_IRQn 0 */
-  while (1)
-  {
+  while (1) {
   }
   /* USER CODE BEGIN HardFault_IRQn 1 */
 
@@ -133,15 +130,13 @@ void HardFault_Handler(void)
 /**
 * @brief This function handles Memory management fault.
 */
-void MemManage_Handler(void)
-{
+void MemManage_Handler(void) {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
 
   lcd_print("MemManage_Handler");
   set_led(OFF);
   /* USER CODE END MemoryManagement_IRQn 0 */
-  while (1)
-  {
+  while (1) {
   }
   /* USER CODE BEGIN MemoryManagement_IRQn 1 */
 
@@ -151,15 +146,13 @@ void MemManage_Handler(void)
 /**
 * @brief This function handles Pre-fetch fault, memory access fault.
 */
-void BusFault_Handler(void)
-{
+void BusFault_Handler(void) {
   /* USER CODE BEGIN BusFault_IRQn 0 */
 
   lcd_print("BusFault_Handler");
   set_led(OFF);
   /* USER CODE END BusFault_IRQn 0 */
-  while (1)
-  {
+  while (1) {
   }
   /* USER CODE BEGIN BusFault_IRQn 1 */
 
@@ -169,15 +162,13 @@ void BusFault_Handler(void)
 /**
 * @brief This function handles Undefined instruction or illegal state.
 */
-void UsageFault_Handler(void)
-{
+void UsageFault_Handler(void) {
   /* USER CODE BEGIN UsageFault_IRQn 0 */
 
   lcd_print("UsageFault_Handler");
   set_led(OFF);
   /* USER CODE END UsageFault_IRQn 0 */
-  while (1)
-  {
+  while (1) {
   }
   /* USER CODE BEGIN UsageFault_IRQn 1 */
 
@@ -187,8 +178,7 @@ void UsageFault_Handler(void)
 /**
 * @brief This function handles System service call via SWI instruction.
 */
-void SVC_Handler(void)
-{
+void SVC_Handler(void) {
   /* USER CODE BEGIN SVCall_IRQn 0 */
 
   /* USER CODE END SVCall_IRQn 0 */
@@ -200,8 +190,7 @@ void SVC_Handler(void)
 /**
 * @brief This function handles Debug monitor.
 */
-void DebugMon_Handler(void)
-{
+void DebugMon_Handler(void) {
   /* USER CODE BEGIN DebugMonitor_IRQn 0 */
 
   /* USER CODE END DebugMonitor_IRQn 0 */
@@ -213,8 +202,7 @@ void DebugMon_Handler(void)
 /**
 * @brief This function handles Pendable request for system service.
 */
-void PendSV_Handler(void)
-{
+void PendSV_Handler(void) {
   /* USER CODE BEGIN PendSV_IRQn 0 */
 
   /* USER CODE END PendSV_IRQn 0 */
