@@ -114,8 +114,10 @@ void NMI_Handler(void) {
 /**
 * @brief This function handles Hard fault interrupt.
 */
+extern char* errmsg;
+
 void HardFault_Handler(void) {
-  lcd_print("HARDFault_Handler");
+  lcd_print(errmsg);
   set_led(OFF);
   /* USER CODE BEGIN HardFault_IRQn 0 */
 

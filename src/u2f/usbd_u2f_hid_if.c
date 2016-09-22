@@ -325,28 +325,39 @@ static void u2f_execute_msg(struct u2f_channel *c) {
 
 static void u2f_execute_lock(struct u2f_channel *c) {}
 
+struct u2f_channel *newc = 0;
+char* errmsg = "";
+
 static void u2f_execute_init(struct u2f_channel *c) {
   U2FHID_INIT_REQ *req_init = (U2FHID_INIT_REQ *)c->data;
   U2FHID_INIT_RESP *resp_init = (U2FHID_INIT_RESP *)c->data;
-  struct u2f_channel *newc;
 
-  lcd_print("1");
   if (c->cid != 0xffffffff) {
     u2f_response_error(ERR_INVALID_PAR);
-    // BUGBUG reset
-    lcd_print("2");
+    lcd_print("Error ERR_INVALID_PAR");
     return;
   }
 
+  if (!newc) newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
+
+  errmsg = "Before free";
+  if (newc) {
+    u2f_channel_deinit(newc);
+    u2f_channel_free(newc);
+  }
+  errmsg = "After free";
   newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
+  errmsg = "After alloc";
+
   if (!newc) {
     u2f_response_error(ERR_OTHER);
-    // BUGBUG reset
-    lcd_print("3");
+    lcd_print("U2F channel alloc failed");
     return;
   }
-  lcd_print("4");
+  lcd_print("Channel init OK");
+  errmsg = "Before init";
   u2f_channel_init(newc, MAX_U2F_BUFSIZE, g_cid++);
+  errmsg = "After init";
 
   /* Nonce is already at same location, no need to copy */
   resp_init->cid = newc->cid;                      // Channel identifier
@@ -356,10 +367,11 @@ static void u2f_execute_init(struct u2f_channel *c) {
   resp_init->versionBuild = 0;                     // Build version number
   resp_init->capFlags = CAPFLAG_WINK;              // Capabilities flags
 
-  lcd_print("5");
-  USBD_U2F_HID_SendResponse(&hUsbDeviceFS, c->cid, c->cmd, (uint8_t *)resp_init,
+  errmsg = "Before response";
+  USBD_U2F_HID_SendResponse(&hUsbDeviceFS, c->cid,
+			    c->cmd, (uint8_t *)resp_init,
                             sizeof(*resp_init));
-  lcd_print("6");
+  errmsg = "After response";
 }
 
 static void u2f_execute_wink(struct u2f_channel *c) {}

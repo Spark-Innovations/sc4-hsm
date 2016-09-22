@@ -75,7 +75,6 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp, int flags,
   /*
    * Generate a key pair for signing
    */
-  mbedtls_printf("random number generator init\n");
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
@@ -176,9 +175,6 @@ cleanup:
   mbedtls_aes_free(&aes);
   mbedtls_entropy_free(&entropy);
   mbedtls_md_free(&ctx_sha256);
-
-  mbedtls_printf("returned %x\n", status);
-
   return status;
 }
 
@@ -205,7 +201,6 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   mbedtls_md_init(&ctx_sha256);
   mbedtls_entropy_init(&entropy);
 
-  mbedtls_printf("random number generator init...\n");
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
@@ -281,8 +276,5 @@ cleanup:
   mbedtls_aes_free(&aes);
   mbedtls_entropy_free(&entropy);
   mbedtls_md_free(&ctx_sha256);
-
-  mbedtls_printf("returned %x\n", status);
-
   return status;
 }
