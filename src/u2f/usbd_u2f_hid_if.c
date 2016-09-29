@@ -225,11 +225,12 @@ struct u2f_channel *u2f_channel_find(uint32_t cid) {
 
 #include "hardware.h"
 static void u2f_response_error(uint8_t code) {
-  set_led(GREEN);
-  lcd_print("errrrrr");
+  set_led(RED);
+  lcd_printf("ERRROR %d", code);
 }
 
 static void u2f_execute_ping(struct u2f_channel *c) {
+  lcd_printf("PING");
   USBD_U2F_HID_SendResponse(&hUsbDeviceFS, c->cid, c->cmd, c->data,
                             c->bcnt_total);
 }
@@ -264,6 +265,8 @@ static void u2f_execute_msg(struct u2f_channel *c) {
 
   req_size = ((uint32_t)req_hdr->lc1) << 16 | ((uint32_t)req_hdr->lc2) << 8 |
              req_hdr->lc1;
+
+  lcd_printf("MSG %d", req_hdr->ins);
 
   switch (req_hdr->ins) {
   case U2F_REGISTER: {
@@ -411,11 +414,8 @@ void u2f_channel_process_ready() {
   struct list_head *p, *n;
   list_for_each_safe(p, n, &ready_list_head) {
     struct u2f_channel *c = list_entry(p, struct u2f_channel, ready);
-    //    lcd_print(">cmd");
     u2f_execute_command(c);
-    //    lcd_print("<cmd");
     list_del(&c->ready);
-    //    lcd_print("<<cmd");
     c->state = CID_STATE_IDLE;
   }
 }
@@ -428,8 +428,6 @@ static int8_t u2f_channel_recv_frame(struct u2f_channel *c,
   if (FRAME_TYPE(*frame) == TYPE_INIT) {
     if (c->state != CID_STATE_IDLE) {
       u2f_response_error(ERR_INVALID_PAR);
-      // BUGBUG reset
-      lcd_print("rrrr");
       return (0);
     }
 

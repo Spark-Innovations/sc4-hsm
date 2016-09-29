@@ -7,8 +7,10 @@
 #include <stdarg.h>
 #include <stdio.h>
 #endif
+
 #undef mbedtls_printf
 #define mbedtls_printf lcd_printf
+
 #include "endian.h"
 #include "keys.h"
 #include "mbedtls/aes.h"
@@ -43,10 +45,12 @@ void lcd_printf(const char *format, ...) {
   vsnprintf(buffer, 256, format, args);
   lcd_print(buffer);
   va_end(args);
+  volatile int i;
+  for (i=0; i<3000000; i++);
 }
 
-uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp, int flags,
-                      uint16_t *olen) {
+uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
+		      int flags, uint16_t *olen) {
   int ret, i;
   size_t len;
   mbedtls_ecdsa_context ctx_new_ec;
@@ -100,8 +104,8 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp, int flags,
     goto cleanup;
   }
 
-  /* Convert EC private key to a key handle -> encrypt it and the appId using an
-   * AES private key */
+  /* Convert EC private key to a key handle -> encrypt it and the appId using
+   * an AES private key */
   MBEDTLS_MPI_CHK(mbedtls_aes_setkey_enc(&aes, aes_key, sizeof(aes_key) * 8));
 
   assert(mbedtls_mpi_size(&ctx_new_ec.d) == 32);

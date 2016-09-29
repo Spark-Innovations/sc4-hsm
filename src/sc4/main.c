@@ -278,6 +278,21 @@ void help() {
   print("0-7: Turn LED on/off\n");
 }
 
+void usb_hid_init();
+void usb_cdc_init();
+void u2f_channel_process_ready();
+
+void u2f() {
+  usb_hid_init();
+  lcd_print("\\2U2F");
+  while (1) {
+    if (user_buttons()) break;
+    u2f_channel_process_ready();
+  }
+  usb_cdc_init();
+  show_banner();
+}
+
 void loop() {
   while(!serial_available());
   set_led(YELLOW);
@@ -301,6 +316,7 @@ void loop() {
   case 'E': erase_keys(); break;
   case 'S': scheme_main(); break;
   case 'X': system_reset(); break;
+  case 'u' : u2f(); break;
   case '0'...'7': set_led(cmd[0]-'0'); break;
   case '?' : help(); break;
   default: printf("Error\n");
@@ -308,11 +324,8 @@ void loop() {
   printf("Ready\n");
 }
 
-void u2f_main();
-
 int main() {
   sc4_hsm_init();
-  //  USBD_HID.Init (&hUsbDeviceFS, 0);
   set_led(YELLOW);
   lcd_print("\n Initializing...");
   _loadkey((u8*)FLASH_USER_START_ADDR);
@@ -320,10 +333,6 @@ int main() {
   set_led(GREEN);
   delay(100);
   set_led(OFF);
-
-  // NOT WORKING
-  u2f_main();
-
-  // Dead code
+  usb_cdc_init();
   while (1) loop();
 }
