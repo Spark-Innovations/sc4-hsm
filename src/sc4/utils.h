@@ -9,7 +9,7 @@
 
 typedef char * string;
 
-#define print serial_printf
+#define print serial_print
 #define printf serial_printf
 
 #ifdef __cplusplus
