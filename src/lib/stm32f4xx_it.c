@@ -118,7 +118,7 @@ extern char* errmsg;
 
 void HardFault_Handler(void) {
   lcd_print(errmsg);
-  set_led(OFF);
+  set_led(RED);
   /* USER CODE BEGIN HardFault_IRQn 0 */
 
   /* USER CODE END HardFault_IRQn 0 */
