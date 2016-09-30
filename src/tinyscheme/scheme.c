@@ -13,7 +13,7 @@
  */
 
 void serial_print(char *s, ...);
-#define print serial_print
+#define print serial_printf
 #define USE_INTERFACE 1
 
 #define _SCHEME_SOURCE

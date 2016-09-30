@@ -3,7 +3,32 @@
 #include "tweetnacl.h"
 #include "utils.h"
 
-void printc(char c) { print("%c", c); }
+// Regualar delay doesn't work in an interrupt handler
+void delay1(int n) {
+  volatile int i;
+  for (i=0; i<n*100000; i++);
+}
+
+/* Output utilities */
+
+void printc(char c) { serial_write(&c, 1); }
+
+void serial_vprintf(const char* format, va_list args) {
+  char buffer[1024];
+  int n = vsnprintf(buffer, 1024, format, args);
+  serial_write(buffer, n);
+}
+
+void serial_printf(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  serial_vprintf(format, args);
+  va_end(args);  
+}
+
+void serial_print(char* s) {
+  while(*s) printc(*s++);
+}
 
 void newline() { printc('\n'); }
 
@@ -24,6 +49,61 @@ void sprinth(char *s, const u8* n, int cnt) {
   }
   s[cnt*2+1]=0;
 }
+
+
+#define BPRINTF_BUFFER_SIZE 4096
+char bprintf_buffer[BPRINTF_BUFFER_SIZE] = {0};
+char *bprintf_ptr = bprintf_buffer;
+int bprintf_size = BPRINTF_BUFFER_SIZE;
+
+void bprintf_reset() {
+  printf("bprint_size = %d %d\n", bprintf_size, bprintf_ptr-bprintf_buffer);
+  serial_write(bprintf_buffer, bprintf_ptr-bprintf_buffer);
+  bprintf_ptr = bprintf_buffer;
+  bprintf_size = BPRINTF_BUFFER_SIZE;
+  print("\nPush a button...");
+  while(!user_buttons());
+  for (int i=0; i<10; i++) while(user_buttons());
+  print("\nOK\n");
+}
+
+void bprintf(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vbprintf(format, args);
+  va_end(args);
+}
+
+void vbprintf(const char *format, va_list args) {
+  int n = vsnprintf(bprintf_ptr, bprintf_size, format, args);
+  bprintf_size -= n;
+  bprintf_ptr += n;
+  *bprintf_ptr++ = '\n';
+  *bprintf_ptr = '\0';
+}
+
+void bprinth(unsigned char* buf, int n) {
+  sprinth(bprintf_ptr, buf, n);
+  bprintf_size -= n;
+  bprintf_ptr += n*2;
+  *bprintf_ptr++ = '\n';
+  *bprintf_ptr = '\0';
+}
+
+void vlcd_printf(const char *format, va_list args) {
+  char buffer[256];
+  vsnprintf(buffer, 256, format, args);
+  lcd_print(buffer);
+}
+
+void lcd_printf(const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vlcd_printf(format, args);
+  va_end(args);
+}
+
+/* Input utilities */
 
 u8 readc() {
   while (!serial_available()) delay(1);
