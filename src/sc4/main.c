@@ -95,7 +95,7 @@ void provision(int n) {
     show_current_key();
     return;
   }
-  print("Provisioning key %d...\n", n);
+  printf("Provisioning key %d...\n", n);
   u8 seeds[20][32];
   memcpy(seeds, (u8*)FLASH_USER_START_ADDR, sizeof(seeds));
   randombytes(seeds[n], 32);
