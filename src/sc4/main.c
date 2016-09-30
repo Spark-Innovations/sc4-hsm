@@ -283,8 +283,9 @@ void usb_cdc_init();
 void u2f_channel_process_ready();
 
 void u2f() {
+  bprintf_reset();
   usb_hid_init();
-  lcd_print("\\2U2F");
+  lcd_print("Running U2F\nPress a button to exit");
   while (1) {
     if (user_buttons()) break;
     u2f_channel_process_ready();
@@ -320,7 +321,7 @@ void loop() {
   case '0'...'7': set_led(cmd[0]-'0'); break;
   case '?' : help(); break;
   default: printf("Error\n");
-  }  
+  }
   printf("Ready\n");
 }
 

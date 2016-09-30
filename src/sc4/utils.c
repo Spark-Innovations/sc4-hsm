@@ -57,14 +57,11 @@ char *bprintf_ptr = bprintf_buffer;
 int bprintf_size = BPRINTF_BUFFER_SIZE;
 
 void bprintf_reset() {
-  printf("bprint_size = %d %d\n", bprintf_size, bprintf_ptr-bprintf_buffer);
   serial_write(bprintf_buffer, bprintf_ptr-bprintf_buffer);
   bprintf_ptr = bprintf_buffer;
   bprintf_size = BPRINTF_BUFFER_SIZE;
-  print("\nPush a button...");
-  while(!user_buttons());
-  for (int i=0; i<10; i++) while(user_buttons());
   print("\nOK\n");
+  delay(100);
 }
 
 void bprintf(const char *format, ...) {
