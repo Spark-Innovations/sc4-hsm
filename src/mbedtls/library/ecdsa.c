@@ -224,7 +224,7 @@ int mbedtls_ecdsa_verify( mbedtls_ecp_group *grp,
     /*
      * Additional precaution: make sure Q is valid
      */
-    MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, Q ) );
+    // FOO    MBEDTLS_MPI_CHK( mbedtls_ecp_check_pubkey( grp, Q ) );
 
     /*
      * Step 3: derive MPI from hashed message
@@ -281,6 +281,8 @@ cleanup:
 /*
  * Convert a signature (given by context) to ASN.1
  */
+#include "utils.h"
+
 static int ecdsa_signature_to_asn1( const mbedtls_mpi *r, const mbedtls_mpi *s,
                                     unsigned char *sig, size_t *slen )
 {
@@ -298,6 +300,8 @@ static int ecdsa_signature_to_asn1( const mbedtls_mpi *r, const mbedtls_mpi *s,
 
     memcpy( sig, p, len );
     *slen = len;
+
+    lcd_printf("\\2LEN: %d", len);
 
     return( 0 );
 }
@@ -317,6 +321,11 @@ int mbedtls_ecdsa_write_signature( mbedtls_ecdsa_context *ctx, mbedtls_md_type_t
     mbedtls_mpi_init( &r );
     mbedtls_mpi_init( &s );
 
+    bprintf("Hash: ");
+    bprinth(hash, hlen);
+    bprintf("SK: ");
+    bprinth(ctx->d.p, 4*(ctx->d.n));
+
 #if defined(MBEDTLS_ECDSA_DETERMINISTIC)
     (void) f_rng;
     (void) p_rng;
@@ -329,6 +338,13 @@ int mbedtls_ecdsa_write_signature( mbedtls_ecdsa_context *ctx, mbedtls_md_type_t
     MBEDTLS_MPI_CHK( mbedtls_ecdsa_sign( &ctx->grp, &r, &s, &ctx->d,
                          hash, hlen, f_rng, p_rng ) );
 #endif
+
+    bprintf("R: ");
+    bprinth(r.p, 32);
+    bprintf("S: ");
+    bprinth(s.p, 32);
+    bprintf("Verify: %d",
+	    mbedtls_ecdsa_verify( &ctx->grp, hash, hlen, &ctx->Q, &r, &s));
 
     MBEDTLS_MPI_CHK( ecdsa_signature_to_asn1( &r, &s, sig, slen ) );
 

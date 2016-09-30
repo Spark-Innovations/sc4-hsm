@@ -285,7 +285,7 @@ void u2f_channel_process_ready();
 void u2f() {
   bprintf_reset();
   usb_hid_init();
-  lcd_print("Running U2F\nPress a button to exit");
+  lcd_print("\\2  U2F");
   while (1) {
     if (user_buttons()) break;
     u2f_channel_process_ready();
