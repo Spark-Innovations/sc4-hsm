@@ -266,6 +266,9 @@ $(OBJ_DIRS):
 	$(MKDIR) -p $@
 
 clean:
+	$(RM) -rf $(wildcard $(BUILD)/firmware*) $(BUILD)/lib $(BUILD)/sc4 $(BUILD)/u2f
+
+spotless:
 	$(RM) -rf $(BUILD)
 	$(RM) -f scheme firmware.bin
 .PHONY: clean
