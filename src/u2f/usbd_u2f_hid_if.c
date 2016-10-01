@@ -291,8 +291,8 @@ static void u2f_execute_msg(struct u2f_channel *c) {
     if (slack_size < sizeof(U2F_AUTHENTICATE_RESP) + 2) {
       u2f_msg_zero_len_response(c, VENDOR_U2F_NOMEM);
     } else {
-      uint16_t status, len = sizeof(U2F_AUTHENTICATE_RESP);
-      status = u2f_authenticate(preq, presp, req_hdr->p1);
+      int len = presp->sig[1] + 2;  // Snarf the length from the DER header
+      uint16_t status = u2f_authenticate(preq, presp, req_hdr->p1);
       if (status == U2F_SW_NO_ERROR) {
         status = cpu_to_be16(status);
         memcpy(slack + len, &status, sizeof(status));
