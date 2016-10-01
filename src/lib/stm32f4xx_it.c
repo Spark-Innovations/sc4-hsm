@@ -114,10 +114,9 @@ void NMI_Handler(void) {
 /**
 * @brief This function handles Hard fault interrupt.
 */
-extern char* errmsg;
 
 void HardFault_Handler(void) {
-  lcd_print(errmsg);
+  lcd_print("HARD FAULT");
   set_led(RED);
   /* USER CODE BEGIN HardFault_IRQn 0 */
 
@@ -135,8 +134,8 @@ void HardFault_Handler(void) {
 void MemManage_Handler(void) {
   /* USER CODE BEGIN MemoryManagement_IRQn 0 */
 
-  lcd_print("MemManage_Handler");
-  set_led(OFF);
+  lcd_print("MEMFAULT");
+  set_led(RED);
   /* USER CODE END MemoryManagement_IRQn 0 */
   while (1) {
   }

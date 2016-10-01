@@ -4,11 +4,10 @@
 #else
 #include <sys/types.h>
 #include <stdarg.h>
-#include "utils.h"
 #endif
 
-#undef mbedtls_printf
-#define mbedtls_printf lcd_printf
+#include <assert.h>
+#include <string.h>
 
 #include "endian.h"
 #include "keys.h"
@@ -17,12 +16,12 @@
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/entropy.h"
 #include "u2f.h"
-#include "uart_printf.h"
-#include <assert.h>
-#include <string.h>
+#include "hardware.h"
 
 unsigned int g_counter = 1;
 #define IMPL_U2F_KEYHANDLE_SIZE 64 /* Expected key handle size */
+
+#define mbedtls_printf lcd_printf
 
 static void dump_buf(const char *title, unsigned char *buf, size_t len) {
 #if 0
@@ -74,14 +73,11 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
     goto cleanup;
   }
 
-  mbedtls_printf("Generating key pair\n");
   if ((ret = mbedtls_ecdsa_genkey(&ctx_new_ec, MBEDTLS_ECP_DP_SECP256R1,
                                   mbedtls_ctr_drbg_random, &ctr_drbg)) != 0) {
     mbedtls_printf("error: mbedtls_ecdsa_genkey returned %d\n", ret);
     goto cleanup;
   }
-
-  mbedtls_printf("ok (key size: %d bits)\n", (int)ctx_new_ec.grp.pbits);
 
   /* Export EC public key */
   ret = mbedtls_ecp_point_write_binary(
@@ -110,8 +106,6 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
   }
   resp->keyHandleLen = IMPL_U2F_KEYHANDLE_SIZE;
   assert(ptr - resp->keyHandleCertSig == IMPL_U2F_KEYHANDLE_SIZE);
-  mbedtls_printf("key handle length = %d\n", resp->keyHandleLen);
-  dump_buf("key handle ", resp->keyHandleCertSig, resp->keyHandleLen);
 
   /* Copy x509 attestation public key certificate */
   memcpy(ptr, attestation_cert, sizeof(attestation_cert));
