@@ -384,7 +384,9 @@ void u2f_channel_process_ready() {
   struct list_head *p, *n;
   list_for_each_safe(p, n, &ready_list_head) {
     struct u2f_channel *c = list_entry(p, struct u2f_channel, ready);
+    set_led(YELLOW);
     u2f_execute_command(c);
+    set_led(OFF);
     list_del(&c->ready);
     c->state = CID_STATE_IDLE;
   }

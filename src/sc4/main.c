@@ -282,20 +282,32 @@ void usb_hid_init();
 void usb_cdc_init();
 void u2f_channel_process_ready();
 
+void show_u2f_banner() {
+  lcd_print("\n\\2 SC4-U2F");
+}
+
 void u2f() {
-  bprintf_reset();
   usb_hid_init();
-  lcd_print("\\2  U2F");
+  show_u2f_banner();
   while (1) {
-    if (user_buttons()) break;
+    if (user_buttons()) {
+      for (int i=0; i<10; i++) while (user_buttons());
+      usb_cdc_init();
+      show_banner();
+      return;
+    }
     u2f_channel_process_ready();
   }
-  usb_cdc_init();
-  show_banner();
 }
 
 void loop() {
-  while(!serial_available());
+  while(!serial_available()) {
+    if (user_buttons()) {
+      for (int i=0; i<10; i++) while (user_buttons());
+      u2f();
+    }
+  }
+  
   set_led(YELLOW);
   int cnt = readln(cmd, sizeof(cmd));  
   set_led(GREEN);
