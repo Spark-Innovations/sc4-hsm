@@ -44,7 +44,7 @@
 #include "u2f.h"
 #include "u2f_hid.h"
 #include "u2f_messages.h"
-#include "uart_printf.h"
+
 #include "hardware.h"
 
 /* Private typedef -----------------------------------------------------------*/
