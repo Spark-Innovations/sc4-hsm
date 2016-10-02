@@ -23,19 +23,6 @@ unsigned int g_counter = 1;
 
 #define mbedtls_printf lcd_printf
 
-static void dump_buf(const char *title, unsigned char *buf, size_t len) {
-#if 0
-    size_t i;
-    const char *hex_digits = "0123456789ABCDEF";
-
-    mbedtls_printf( "%s", title );
-    for( i = 0; i < len; i++ )
-        mbedtls_printf("%c%c", hex_digits[buf[i] / 16],
-            hex_digits[buf[i] % 16] );
-    mbedtls_printf( "\n" );
-#endif
-}
-
 uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
 		      int flags, uint16_t *olen) {
   int ret, i;
@@ -66,6 +53,7 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
   /*
    * Generate a key pair for signing
    */
+
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
@@ -93,9 +81,11 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
   MBEDTLS_MPI_CHK(mbedtls_aes_setkey_enc(&aes, aes_key, sizeof(aes_key) * 8));
 
   assert(mbedtls_mpi_size(&ctx_new_ec.d) == 32);
+
   /* load EC private key to start of buf */
-  mbedtls_mpi_write_binary(&ctx_new_ec.d, buf, mbedtls_mpi_size(&ctx_new_ec.d));
-  dump_buf("private key ", buf, mbedtls_mpi_size(&ctx_new_ec.d));
+  mbedtls_mpi_write_binary(&ctx_new_ec.d, buf,
+			   mbedtls_mpi_size(&ctx_new_ec.d));
+
   /* Copy appId to the buffer, after the EC private key */
   memcpy(buf + 32, req->appId, U2F_APPID_SIZE);
 
@@ -134,8 +124,6 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
                     sizeof(U2F_EC_POINT));
 
   mbedtls_md_finish(&ctx_sha256, buf);
-
-  dump_buf("sha256 ", buf, mbedtls_md_get_size(md_info));
 
   /* Sign the SHA256 hash using the attestation key */
   mbedtls_ecp_group_load(&ctx_attestation.grp, MBEDTLS_ECP_DP_SECP256R1);
@@ -197,8 +185,6 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   /* Convert key handle to EC private key -> decrypt it using AES private key */
   MBEDTLS_MPI_CHK(mbedtls_aes_setkey_dec(&aes, aes_key, sizeof(aes_key) * 8));
 
-  dump_buf("key handle ", req->keyHandle, req->keyHandleLen);
-
   if (req->keyHandleLen != IMPL_U2F_KEYHANDLE_SIZE) {
     mbedtls_printf("wrong key handle len %d\n", req->keyHandleLen);
     status = U2F_SW_WRONG_DATA;
@@ -209,9 +195,6 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
     mbedtls_aes_crypt_ecb(&aes, MBEDTLS_AES_DECRYPT, &req->keyHandle[i * 16],
                           &buf[i * 16]);
   }
-
-  dump_buf("ec private ", buf, 32);
-  dump_buf("key handle appid ", buf + 32, 32);
 
   /* compare request appid with appid extracted from key handle */
   if (memcmp(&buf[32], req->appId, U2F_APPID_SIZE) != 0) {
@@ -244,8 +227,6 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
    */
   mbedtls_md_update(&ctx_sha256, req->chal, U2F_CHAL_SIZE);
   mbedtls_md_finish(&ctx_sha256, buf);
-
-  dump_buf("sha256 ", buf, mbedtls_md_get_size(md_info));
 
   if ((ret = mbedtls_ecdsa_write_signature(
            &ctx_ec, MBEDTLS_MD_SHA256, buf, mbedtls_md_get_size(md_info),

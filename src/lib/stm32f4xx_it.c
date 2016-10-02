@@ -111,37 +111,28 @@ void NMI_Handler(void) {
   /* USER CODE END NonMaskableInt_IRQn 1 */
 }
 
+
+char* faultmsg = "0";
+
 /**
 * @brief This function handles Hard fault interrupt.
 */
 
 void HardFault_Handler(void) {
-  lcd_print("HARD FAULT");
+  lcd_printf("HARD FAULT\n%s", faultmsg);
   set_led(RED);
-  /* USER CODE BEGIN HardFault_IRQn 0 */
-
-  /* USER CODE END HardFault_IRQn 0 */
-  while (1) {
-  }
-  /* USER CODE BEGIN HardFault_IRQn 1 */
-
-  /* USER CODE END HardFault_IRQn 1 */
+  for (volatile int i=0; i<15000000; i++);
+  system_reset();
 }
 
 /**
 * @brief This function handles Memory management fault.
 */
 void MemManage_Handler(void) {
-  /* USER CODE BEGIN MemoryManagement_IRQn 0 */
-
   lcd_print("MEMFAULT");
   set_led(RED);
-  /* USER CODE END MemoryManagement_IRQn 0 */
-  while (1) {
-  }
-  /* USER CODE BEGIN MemoryManagement_IRQn 1 */
-
-  /* USER CODE END MemoryManagement_IRQn 1 */
+  for (volatile int i=0; i<5000000; i++);
+  system_reset();
 }
 
 /**

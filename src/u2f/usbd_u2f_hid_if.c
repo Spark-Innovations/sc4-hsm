@@ -170,18 +170,14 @@ struct u2f_channel {
 #define MAX_CHANNELS 5
 #define MAX_U2F_BUFSIZE 7609
 uint8_t g_cnt_cid = 0;
+
 struct u2f_channel *u2f_channel_alloc(uint16_t buff_size) {
   struct u2f_channel *ret;
   size_t size = sizeof(struct u2f_channel) + buff_size;
 
-  if (g_cnt_cid >= MAX_CHANNELS) {
-    return NULL;
-  }
+  if (g_cnt_cid >= MAX_CHANNELS) return NULL;
   ret = USBD_malloc(size);
-  if (ret) {
-    g_cnt_cid++;
-  }
-
+  if (ret) g_cnt_cid++;
   return ret;
 }
 
@@ -325,20 +321,12 @@ static void u2f_execute_init(struct u2f_channel *c) {
     return;
   }
 
-  if (!newc) newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
-
-  if (newc) {
-    u2f_channel_deinit(newc);
-    u2f_channel_free(newc);
-  }
-
-  newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
-
   if (!newc) {
-    u2f_response_error(ERR_OTHER);
-    lcd_print("U2F channel alloc failed");
-    return;
+    newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
+    u2f_channel_init(newc, MAX_U2F_BUFSIZE, g_cid++);
   }
+
+  u2f_channel_deinit(newc);
   u2f_channel_init(newc, MAX_U2F_BUFSIZE, g_cid++);
 
   /* Nonce is already at same location, no need to copy */
@@ -352,6 +340,7 @@ static void u2f_execute_init(struct u2f_channel *c) {
   USBD_U2F_HID_SendResponse(&hUsbDeviceFS, c->cid,
 			    c->cmd, (uint8_t *)resp_init,
                             sizeof(*resp_init));
+
 }
 
 static void u2f_execute_wink(struct u2f_channel *c) {}
@@ -468,18 +457,12 @@ static int8_t U2F_HID_OutEvent_FS(uint8_t *data, uint16_t len) {
  * USBD_FAIL
   */
 static int8_t U2F_HID_Init_FS(void) {
-  /* USER CODE BEGIN 4 */
-  struct u2f_channel *newc;
   hUsbDevice_0 = &hUsbDeviceFS;
-
-  newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
-  if (!newc) {
-    return -1;
-  }
+  // How can this be anything other than a memory leak???
+  struct u2f_channel *newc = u2f_channel_alloc(MAX_U2F_BUFSIZE);
+  if (!newc) return USBD_FAIL;
   u2f_channel_init(newc, MAX_U2F_BUFSIZE, 0xffffffff);
-
-  return (0);
-  /* USER CODE END 4 */
+  return USBD_OK;
 }
 
 /* USER CODE BEGIN 7 */
