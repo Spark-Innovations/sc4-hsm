@@ -78,7 +78,7 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
 
   /* Convert EC private key to a key handle -> encrypt it and the appId using
    * an AES private key */
-  MBEDTLS_MPI_CHK(mbedtls_aes_setkey_enc(&aes, aes_key, sizeof(aes_key) * 8));
+  MBEDTLS_MPI_CHK(mbedtls_aes_setkey_enc(&aes, aes_key, 128));
 
   assert(mbedtls_mpi_size(&ctx_new_ec.d) == 32);
 
@@ -183,7 +183,7 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   }
 
   /* Convert key handle to EC private key -> decrypt it using AES private key */
-  MBEDTLS_MPI_CHK(mbedtls_aes_setkey_dec(&aes, aes_key, sizeof(aes_key) * 8));
+  MBEDTLS_MPI_CHK(mbedtls_aes_setkey_dec(&aes, aes_key, 128));
 
   if (req->keyHandleLen != IMPL_U2F_KEYHANDLE_SIZE) {
     mbedtls_printf("wrong key handle len %d\n", req->keyHandleLen);

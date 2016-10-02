@@ -25,6 +25,7 @@ u8 _ssk[64];
 u8 spk[32];
 u8 esk[32];
 u8 epk[32];
+u8 aes_key[32];  // For U2F
 
 void _loadkey(u8* seed) {
   u8 hash[64];
@@ -35,6 +36,8 @@ void _loadkey(u8* seed) {
   crypto_hash(hash, _ssk, 32);
   memcpy(esk, hash, 32);
   spk2epk(epk, spk);
+  crypto_hash(hash, hash, 64);
+  memcpy(aes_key, hash, 32);
 }
 
 void show_current_key() {
@@ -263,6 +266,7 @@ void help() {
   print("l[n]: Load key N\n");
   print("P[n]: Provision key N\n");
   print("R: Enable read protection\n");
+  print("u: Start FIDO U2F with currently loaded key");
   print("s[string]: Sign string with currently loaded key\n");
   print("d[key]: Generate a diffie-hellman key\n");
   print("h[N]: Compute the SHA512 hash of N bytes of data\n");
@@ -321,13 +325,13 @@ void loop() {
   case 'd': diffie_helman((char *)(cmd + 1)); break;
   case 'h': hash_data(cmd +1); break;
   case 'r': randi(cmd+1); break;
+  case 'u' : u2f(); break;
   case 'p': lcd_print((char *)(cmd+1)); break;
   case 'n': lcd_noise(); break;
   case 'm': moire(); break;
   case 'E': erase_keys(); break;
   case 'S': scheme_main(); break;
   case 'X': system_reset(); break;
-  case 'u' : u2f(); break;
   case '0'...'7': set_led(cmd[0]-'0'); break;
   case '?' : help(); break;
   default: printf("Error\n");
