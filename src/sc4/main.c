@@ -290,7 +290,6 @@ void show_u2f_banner() {
 
 void u2f() {
   usb_hid_init();
-  show_u2f_banner();
   while (1) {
     if (user_buttons()) {
       for (int i=0; i<10; i++) while (user_buttons());
@@ -298,6 +297,7 @@ void u2f() {
       show_banner();
       return;
     }
+    show_u2f_banner();
     u2f_channel_process_ready();
   }
 }

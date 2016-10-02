@@ -54,16 +54,18 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
    * Generate a key pair for signing
    */
 
+  lcd_printf("\n  U2F Register");
+
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
-    mbedtls_printf("error: mbedtls_ctr_drbg_seed returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ctr_drbg_seed returned %d\n", ret);
     goto cleanup;
   }
 
   if ((ret = mbedtls_ecdsa_genkey(&ctx_new_ec, MBEDTLS_ECP_DP_SECP256R1,
                                   mbedtls_ctr_drbg_random, &ctr_drbg)) != 0) {
-    mbedtls_printf("error: mbedtls_ecdsa_genkey returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ecdsa_genkey returned %d\n", ret);
     goto cleanup;
   }
 
@@ -72,7 +74,7 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
       &ctx_new_ec.grp, &ctx_new_ec.Q, MBEDTLS_ECP_PF_UNCOMPRESSED, &len,
       (unsigned char *)&resp->pubKey, sizeof(resp->pubKey));
   if (ret != 0) {
-    mbedtls_printf("error: mbedtls_ecp_point_write_binary returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ecp_point_write_binary returned %d\n", ret);
     goto cleanup;
   }
 
@@ -134,7 +136,7 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
                                            buf, mbedtls_md_get_size(md_info),
                                            ptr, &len, mbedtls_ctr_drbg_random,
                                            &ctr_drbg)) != 0) {
-    mbedtls_printf("error: mbedtls_ecdsa_genkey returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ecdsa_genkey returned %d\n", ret);
     goto cleanup;
   }
   ptr += len;
@@ -178,7 +180,7 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
-    mbedtls_printf("error: mbedtls_ctr_drbg_seed returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ctr_drbg_seed returned %d\n", ret);
     goto cleanup;
   }
 
@@ -198,10 +200,12 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
 
   /* compare request appid with appid extracted from key handle */
   if (memcmp(&buf[32], req->appId, U2F_APPID_SIZE) != 0) {
-    mbedtls_printf("error: appid mismatch\n");
+    mbedtls_printf("Error: appid mismatch\n");
     status = U2F_SW_WRONG_DATA;
     goto cleanup;
   }
+
+  lcd_printf("\n\\2U2F AUTH");
 
   mbedtls_ecp_group_load(&ctx_ec.grp, MBEDTLS_ECP_DP_SECP256R1);
   mbedtls_mpi_read_binary(&ctx_ec.d, buf, 32);
@@ -231,7 +235,7 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   if ((ret = mbedtls_ecdsa_write_signature(
            &ctx_ec, MBEDTLS_MD_SHA256, buf, mbedtls_md_get_size(md_info),
            resp->sig, &len, mbedtls_ctr_drbg_random, &ctr_drbg)) != 0) {
-    mbedtls_printf("error: mbedtls_ecdsa_genkey returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ecdsa_genkey returned %d\n", ret);
     goto cleanup;
   }
 
