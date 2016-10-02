@@ -17,8 +17,6 @@ void user_tick_handler() {
   // service routine.  User ISR code goes here.
 }
 
-void system_reset() { NVIC_SystemReset(); }
-
 // Global storage for currently active key
 // _ssk is 64 bytes because TweetNaCl keeps a copy of the spk
 // appended to the ssk

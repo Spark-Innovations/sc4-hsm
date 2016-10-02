@@ -23,6 +23,8 @@ extern "C" {
   void sprinth(char *, const u8*, int);
   void newline(void);
 
+  void system_reset();
+
   void serial_print(string);
   void serial_printf(const char*, ...);
   void serial_vprintf(const char*, va_list);

@@ -1,4 +1,4 @@
-
+#include "stm32f4xx_hal.h"
 #include "hardware.h"
 #include "tweetnacl.h"
 #include "utils.h"
@@ -8,6 +8,8 @@ void delay1(int n) {
   volatile int i;
   for (i=0; i<n*100000; i++);
 }
+
+void system_reset() { NVIC_SystemReset(); }
 
 /* Output utilities */
 
