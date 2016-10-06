@@ -34,15 +34,15 @@ The SC4-HSM comes pre-programmed with demo software.  The hardware presents itse
 
 To run the pre-flashed demo, simply plug the unit into a USB port and connect to it using a terminal emulator.  The details of how to do this depend on your operating system.  On Linux, the device will show up as /dev/ttyACM0.  On a Mac, it will show up as /dev/cu.usbmodem80171 (the number may be different).  On Windows it will show up as a USB serial device named "STM32 Virtual Com Port."
 
-The SC4-HSM software comes with a little terminal emulator called "term" which you can use to communicate with the SC4-HSM.  The source code is in the tools directory.  To build it, just type 'make'.
+The SC4-HSM software comes with a little terminal emulator called "term" which you can use to communicate with the SC4-HSM.  The source code is in the tools directory.  To build it, just cd to the tools directory and type 'make'.
 
 Note that on Linux the SC4-HSM by default is accessible only by the root user, so you will need to use [sudo](https://en.wikipedia.org/wiki/Sudo) or [setuid](https://en.wikipedia.org/wiki/Setuid) to obtain the necessary privileges.
 
 ## Programming the SC4-HSM
 
-The SC4-HSM comes with demo software pre-loaded into the flash.  A tarball of the source code for the demo is [here](sc4-hsm.tgz) (a [git repository](https://github.com/Spark-Innovations/sc4-hsm) will be available soon).
+The SC4-HSM comes with demo firmware pre-loaded into the flash.  But the HSM is designed for you to build and upload firmware yourself.  The best place to get the latest firmware is our [git repository](https://github.com/Spark-Innovations/sc4-hsm) but you can also download a tarball [here](sc4-hsm.tgz).  The git repo will generally be more up to date than the tarball, but the tarball includes a pre-built binary that you can use without having to install the gnu-arm compiler toolchain (see the section entitled "Building the firmware" below).
 
-The tarball includes a pre-built binary of the demo software in build/firmware.dfu.  In order to load new firmware into the SC4-HSM you will need a copy of [dfu-util](http://dfu-util.sourceforge.net).
+In order to load new firmware into the SC4-HSM you will need a copy of [dfu-util](http://dfu-util.sourceforge.net).
 
 To load new firmware you will need to get the SC4-HSM in to DFU (Device Firmware Update) mode.  To do this, hold down the DFU button on the bottom of the board (see figure 1) while resetting the device, either by pressing the RESET button at the top of the board, or by plugging the device into a USB port while holding down the DFU button.
 
@@ -52,47 +52,13 @@ To load new firmware you will need to get the SC4-HSM in to DFU (Device Firmware
 
 If you have successfully put the device in DFU mode, the display will be blank.
 
-Note that to gain physical access to the Reset and DFU buttons you may need to open the case.  Some of the prototype units have small holes through which you can access these buttons with a paperclip or similar tool, but some don't, and you may find opening the case to be more convenient regardless.  The case of the prototype units is 3-D printed plastic, and is designed to come apart easily so you can access the reset and DFU (Device Firmware Update) buttons for loading new firmware.  The case snaps together, but it is a pretty loose fit so use caution when opening and closing the case.
+Note that you can gain physical access to the reset and DFU buttons either by opening the case, or by using a small object like a paperclip (I use a thumb tack with the tip cut off with a pair of wire cutters) inserted through the small access holes in the case.  The case is made of 3-D printed plastic, and is designed to come apart easily.  The case snaps together, but it is a pretty loose fit so use caution when opening and closing it.
 
-Once the unit is in DFU mode, you will need to first determine the device's serial number.  You do this with the following command:
-
-```
-dfu-util --list
-```
-
-The output will look like something this:
-
-```
-dfu-util 0.9
-
-Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
-Copyright 2010-2016 Tormod Volden and Stefan Schmidt
-This program is Free Software and has ABSOLUTELY NO WARRANTY
-Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
-
-Found DFU: [0483:df11] ver=2200, devnum=30, cfg=1, intf=0, path="128-1.7", alt=3, name="@Device Feature/0xFFFF0000/01*004 e", serial="335A36863335"
-Found DFU: [0483:df11] ver=2200, devnum=30, cfg=1, intf=0, path="128-1.7", alt=2, name="@OTP Memory /0x1FFF7800/01*512 e,01*016 e", serial="335A36863335"
-Found DFU: [0483:df11] ver=2200, devnum=30, cfg=1, intf=0, path="128-1.7", alt=1, name="@Option Bytes  /0x1FFFC000/01*016 e", serial="335A36863335"
-Found DFU: [0483:df11] ver=2200, devnum=30, cfg=1, intf=0, path="128-1.7", alt=0, name="@Internal Flash  /0x08000000/04*016Kg,01*064Kg,07*128Kg", serial="335A36863335"
-```
-
-Note the serial number of your device (in this case 335A36863335).  To upload the firmware do:
-
-```
-dfu-util -S [your-serial-number] -a 0 -D build/firmware.dfu
-```
-
-NOTE: It is actually not necessary to specify the serial number.  If you only have one DFU device plugged in (which should normally be the case) then you can just do:
-
-```
-dfu-util -a 0 -D build/firmware.dfu
-```
-
-and it should work.  But specifying the serial number insures that you don't accidentally upload the SC4-HSM firmware to some other device.
+Once the unit is in DFU mode, all you need to do to upload the firmware is to run the "hsm" script in the "tools" directory.
 
 Once the firmware is uploaded, run it by pressing the Reset button again (without holding down the DFU button, obviously) or unplug the device and plug it back in again.
 
-Note that there is a little script in the tools directory called 'hsm' that automates the process of communicating with the SC4-HSM and uploading new firmware.  When you run 'hsm' it will look for a connected SC4-HSM, determine whether or not it is in DFU mode, and then either connect you to the device using the "term" program or upload the firmware, as appropriate.  So in general, all you need to do is run 'hsm' and it should do the Right Thing automagically.  This script works on OS X.  If you are running on Linux you will need to edit the 
+Note that the "hsm" script will automatically detect if the HSM is in DFU mode.  If it is, it will upload the latest firmware.  If it is not, it will run the "term" program.  So in general all you need to do to interact with the HSM in whatever mode it is in it to run the "hsm" script.
 
 ## Building the firmware
 
@@ -111,6 +77,8 @@ That's it!
 # Demo code
 
 The demo firmware includes a copy of TweetNaCl and a very (very!) minimal UI.  There are also several "fun" demos to showcase the display and some of the other capabilities of the SC4-HSM.  Just for fun, I even threw in a copy of TinyScheme.  To explore the demo code, connect to the SC4-HSM using a terminal emulator (see the "Getting started" section above) and type "?" followed by a carriage return to get a list of commands.
+
+*NEW* There is now a [FIDO U2F](https://en.wikipedia.org/wiki/Universal_2nd_Factor) functionality for the SC4-HSM.  The code for this lives in the git repository in the u2f branch.  To access it, just check out the u2f branch, run "make", and then upload the resulting firmware.  Press the "reset" button and then either one of the user buttons to get into U2F mode.  (We are working on getting the device to present itself as a virtual com port and a U2F HID device at the same time, but that is not yet working.)
 
 ## Cryptgraphy and security
 
