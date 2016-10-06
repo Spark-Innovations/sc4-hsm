@@ -9,7 +9,6 @@ typedef unsigned char u8;
 extern "C" {
 #endif
 
-
 //#define FLASH_PAGE_SIZE         ((uint32_t)0x00000800)   /* FLASH Page Size */
 // We use Sector 2 for user data. This is a 16k sector.
 #define FLASH_USER_START_ADDR   ((uint32_t)0x08008000)   /* Start @ of user Flash area */
@@ -35,7 +34,7 @@ uint32_t erase_user_flash();
 void write_flash(uint8_t *data, uint16_t addr, uint16_t sz);
 uint8_t serial_available(void);
 uint16_t serial_read(void);
-void serial_print(char *format, ...);
+void serial_write(char *, int);
 void serial_flush(void);
 uint32_t user_buttons();
 

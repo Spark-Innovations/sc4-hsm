@@ -1,7 +1,14 @@
 #include <stdlib.h>
 #include "init.h"
-#include "usb_device.h"
 #include "hardware.h"
+
+#include "usb_device.h"
+#include "usbd_core.h"
+#include "usbd_desc.h"
+#include "usbd_cdc.h"
+#include "usbd_cdc_if.h"
+#include "usbd_u2fhid.h"
+#include "usbd_u2f_hid_if.h"
 
 SPI_HandleTypeDef hspi1;
 RNG_HandleTypeDef hrng;
@@ -119,26 +126,27 @@ void SystemClock_Config(void) {
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
+
+USBD_HandleTypeDef hUsbDeviceFS;
+
+void usb_hid_init() {
+  USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);  
+  USBD_RegisterClass(&hUsbDeviceFS, &USBD_U2F_HID);
+  USBD_U2F_HID_RegisterInterface(&hUsbDeviceFS, &USBD_U2FHID_fops_FS);
+  USBD_Start(&hUsbDeviceFS);
+}
+
+void usb_cdc_init() {
+  USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS);
+  USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC);
+  USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS);
+  USBD_Start(&hUsbDeviceFS);
+}
+
 void sc4_hsm_init(void) {
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
-   */
   HAL_Init();
-
-  /* Configure the system clock */
   SystemClock_Config();
-
-  /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_SPI1_Init();
-  MX_USB_DEVICE_Init();
   MX_RNG_Init();
-
-  // disconnect from USB for .1 seconds
-  // This appears to not actually be necessary
-  USB_DevDisconnect(USB_OTG_FS);
-  delay(100); // wait .1 sec
-  USB_DevConnect(USB_OTG_FS);
-
-  MX_USB_DEVICE_Init();
 }

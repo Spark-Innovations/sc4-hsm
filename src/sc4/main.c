@@ -17,8 +17,6 @@ void user_tick_handler() {
   // service routine.  User ISR code goes here.
 }
 
-void system_reset() { NVIC_SystemReset(); }
-
 // Global storage for currently active key
 // _ssk is 64 bytes because TweetNaCl keeps a copy of the spk
 // appended to the ssk
@@ -27,6 +25,7 @@ u8 _ssk[64];
 u8 spk[32];
 u8 esk[32];
 u8 epk[32];
+u8 aes_key[32];  // For U2F
 
 void _loadkey(u8* seed) {
   u8 hash[64];
@@ -37,6 +36,8 @@ void _loadkey(u8* seed) {
   crypto_hash(hash, _ssk, 32);
   memcpy(esk, hash, 32);
   spk2epk(epk, spk);
+  crypto_hash(hash, hash, 64);
+  memcpy(aes_key, hash, 32);
 }
 
 void show_current_key() {
@@ -95,7 +96,7 @@ void provision(int n) {
     show_current_key();
     return;
   }
-  print("Provisioning key %d...\n", n);
+  printf("Provisioning key %d...\n", n);
   u8 seeds[20][32];
   memcpy(seeds, (u8*)FLASH_USER_START_ADDR, sizeof(seeds));
   randombytes(seeds[n], 32);
@@ -265,6 +266,7 @@ void help() {
   print("l[n]: Load key N\n");
   print("P[n]: Provision key N\n");
   print("R: Enable read protection\n");
+  print("u: Start FIDO U2F with currently loaded key");
   print("s[string]: Sign string with currently loaded key\n");
   print("d[key]: Generate a diffie-hellman key\n");
   print("h[N]: Compute the SHA512 hash of N bytes of data\n");
@@ -278,8 +280,36 @@ void help() {
   print("0-7: Turn LED on/off\n");
 }
 
+void usb_hid_init();
+void usb_cdc_init();
+void u2f_channel_process_ready();
+
+void show_u2f_banner() {
+  lcd_print("\n\\2 SC4-U2F");
+}
+
+void u2f() {
+  usb_hid_init();
+  while (1) {
+    if (user_buttons()) {
+      for (int i=0; i<10; i++) while (user_buttons());
+      usb_cdc_init();
+      show_banner();
+      return;
+    }
+    show_u2f_banner();
+    u2f_channel_process_ready();
+  }
+}
+
 void loop() {
-  while(!serial_available());
+  while(!serial_available()) {
+    if (user_buttons()) {
+      for (int i=0; i<10; i++) while (user_buttons());
+      u2f();
+    }
+  }
+  
   set_led(YELLOW);
   int cnt = readln(cmd, sizeof(cmd));  
   set_led(GREEN);
@@ -295,6 +325,7 @@ void loop() {
   case 'd': diffie_helman((char *)(cmd + 1)); break;
   case 'h': hash_data(cmd +1); break;
   case 'r': randi(cmd+1); break;
+  case 'u' : u2f(); break;
   case 'p': lcd_print((char *)(cmd+1)); break;
   case 'n': lcd_noise(); break;
   case 'm': moire(); break;
@@ -304,7 +335,7 @@ void loop() {
   case '0'...'7': set_led(cmd[0]-'0'); break;
   case '?' : help(); break;
   default: printf("Error\n");
-  }  
+  }
   printf("Ready\n");
 }
 
@@ -315,7 +346,8 @@ int main() {
   _loadkey((u8*)FLASH_USER_START_ADDR);
   show_banner();
   set_led(GREEN);
-  delay(500);
+  delay(100);
   set_led(OFF);
+  usb_cdc_init();
   while (1) loop();
 }

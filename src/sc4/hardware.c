@@ -124,19 +124,24 @@ uint16_t serial_read(void) {
   return ret;
 }
 
-void serial_print(char *format, ...) {
-  va_list arg;
-  uint16_t len;
-  char buffer[256];
-  va_start(arg, format);
-  len = vsprintf(buffer, format, arg);
-  va_end(arg);
-  CDC_Transmit_FS((uint8_t *)buffer, len);
+void serial_write(char *buf, int n) {
+  CDC_Transmit_FS((uint8_t *)buf, n);
 }
 
 void serial_flush(void) {
   USBD_CDC_HandleTypeDef *hcdc = hUsbDevice_0->pClassData;
+  // This hangs when USB CDC has been reset
+  set_led(BLUE);
   while (hcdc->TxState);
+  set_led(OFF);
+}
+
+// Pat Nystrom recommended this but empirically it doesn't seem to do
+// anything useful
+void usb_reset() {
+  USB_DevDisconnect(USB_OTG_FS);
+  delay(100); // wait .1 sec
+  USB_DevConnect(USB_OTG_FS);
 }
 
 uint32_t user_buttons() {
