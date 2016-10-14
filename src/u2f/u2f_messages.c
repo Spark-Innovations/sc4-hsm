@@ -23,6 +23,20 @@ unsigned int g_counter = 1;
 
 #define mbedtls_printf lcd_printf
 
+int get_user_confirmation() {
+  int b;
+  while (!(b=user_buttons()));
+  for (int i=0; i<1000; i++) while(user_buttons());
+  if (b&1) {
+    set_led(RED);
+    lcd_printf("Canncelled");
+    delay1(100);
+    return 0;
+  }
+  set_led(GREEN);
+  return 1;
+}
+
 uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
 		      int flags, uint16_t *olen) {
   int ret, i;
@@ -50,12 +64,15 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
   mbedtls_md_init(&ctx_sha256);
   mbedtls_entropy_init(&entropy);
 
-  /*
-   * Generate a key pair for signing
-   */
+  // Get user confirmation
+  set_led(YELLOW);
+  unsigned int *p = (unsigned int *)(&req->appId);
+  lcd_printf("U2F Enroll         OKAppId:\n%x %x\n               CANCEL",
+	     p[0], p[1]);
+  if (!get_user_confirmation()) goto cleanup;
+  lcd_printf("Enrolling...");
 
-  lcd_printf("\n  U2F Register");
-
+  /* Generate a key pair */
   if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                    (const unsigned char *)pers,
                                    strlen(pers))) != 0) {
@@ -150,6 +167,7 @@ cleanup:
   mbedtls_aes_free(&aes);
   mbedtls_entropy_free(&entropy);
   mbedtls_md_free(&ctx_sha256);
+  set_led(OFF);
   return status;
 }
 
@@ -182,12 +200,15 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
     goto cleanup;
   }
 
-  /* Convert key handle to EC private key -> decrypt it using AES private key */
+  /* Decrypt key handle to obtain EC private key */
   MBEDTLS_MPI_CHK(mbedtls_aes_setkey_dec(&aes, aes_key, 128));
 
   if (req->keyHandleLen != IMPL_U2F_KEYHANDLE_SIZE) {
     mbedtls_printf("wrong key handle len %d\n", req->keyHandleLen);
     status = U2F_SW_WRONG_DATA;
+    lcd_printf("Bad U2F auth request");
+    set_led(RED);
+    delay1(100);
     goto cleanup;
   }
 
@@ -200,10 +221,19 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   if (memcmp(&buf[32], req->appId, U2F_APPID_SIZE) != 0) {
     mbedtls_printf("Error: appid mismatch\n");
     status = U2F_SW_WRONG_DATA;
+    lcd_printf("Bad U2F auth request");
+    set_led(RED);
+    delay1(100);
     goto cleanup;
   }
 
-  lcd_printf("\n\\2U2F AUTH");
+  // Get user confirmation
+  set_led(YELLOW);
+  unsigned int *p = (unsigned int *)(&req->appId);
+  lcd_printf("U2F Login          OKAppId:\n%x %x\n               CANCEL",
+	     p[0], p[1]);
+  if (!get_user_confirmation()) goto cleanup;
+  lcd_printf("Authenticating...");
 
   mbedtls_ecp_group_load(&ctx_ec.grp, MBEDTLS_ECP_DP_SECP256R1);
   mbedtls_mpi_read_binary(&ctx_ec.d, buf, 32);
@@ -240,6 +270,7 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   status = U2F_SW_NO_ERROR;
 
 cleanup:
+  set_led(OFF);
   mbedtls_ecdsa_free(&ctx_ec);
   mbedtls_ctr_drbg_free(&ctr_drbg);
   mbedtls_aes_free(&aes);

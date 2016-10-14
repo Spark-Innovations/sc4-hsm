@@ -43,6 +43,8 @@ extern "C" {
   void show_banner();
   void scheme_main();
 
+  void delay1(int);
+
 #ifdef __cplusplus
 }
 #endif
