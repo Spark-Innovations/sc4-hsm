@@ -68,7 +68,7 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
   set_led(YELLOW);
   unsigned int *p = (unsigned int *)(&req->appId);
   lcd_printf("U2F Enroll         OKAppId:\n%x %x\n               CANCEL",
-	     p[0], p[1]);
+	     cpu_to_be32(p[0]), cpu_to_be32(p[1]));
   if (!get_user_confirmation()) goto cleanup;
   lcd_printf("Enrolling...");
 
