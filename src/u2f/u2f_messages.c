@@ -24,8 +24,16 @@ unsigned int g_counter = 1;
 #define mbedtls_printf lcd_printf
 
 int get_user_confirmation() {
-  int b;
-  while (!(b=user_buttons()));
+  int b, cnt=0;
+  while (!(b=user_buttons())) {
+    if (cnt++ > (1<<24)) {
+      set_led(RED);
+      lcd_printf("\n\\2 TIMEOUT");
+      delay1(100);
+      return 0;
+    }
+  }
+  // Wait for button release with debounce
   for (int i=0; i<1000; i++) while(user_buttons());
   if (b&1) {
     set_led(RED);
