@@ -16,7 +16,7 @@
 #include "mbedtls/ecdsa.h"
 #include "mbedtls/entropy.h"
 #include "u2f.h"
-#include "hardware.h"
+#include "utils.h"
 
 unsigned int g_counter = 1;
 #define IMPL_U2F_KEYHANDLE_SIZE 64 /* Expected key handle size */
@@ -68,6 +68,8 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
     mbedtls_printf("Error: mbedtls_ecdsa_genkey returned %d\n", ret);
     goto cleanup;
   }
+  
+  assert(mbedtls_mpi_size(&ctx_new_ec.d) <= 32);
 
   /* Export EC public key */
   ret = mbedtls_ecp_point_write_binary(
@@ -82,11 +84,8 @@ uint16_t u2f_register(U2F_REGISTER_REQ *req, U2F_REGISTER_RESP *resp,
    * an AES private key */
   MBEDTLS_MPI_CHK(mbedtls_aes_setkey_enc(&aes, aes_key, 128));
 
-  assert(mbedtls_mpi_size(&ctx_new_ec.d) == 32);
-
   /* load EC private key to start of buf */
-  mbedtls_mpi_write_binary(&ctx_new_ec.d, buf,
-			   mbedtls_mpi_size(&ctx_new_ec.d));
+  mbedtls_mpi_write_binary(&ctx_new_ec.d, buf, 32);
 
   /* Copy appId to the buffer, after the EC private key */
   memcpy(buf + 32, req->appId, U2F_APPID_SIZE);
@@ -166,7 +165,6 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   const mbedtls_md_info_t *md_info;
   const char *pers = "ecdsa";
   unsigned char buf[64];
-  unsigned char *ptr;
   uint16_t status = U2F_SW_INS_NOT_SUPPORTED;
 
   memset(resp, 0, sizeof(*resp));
@@ -235,7 +233,7 @@ uint16_t u2f_authenticate(U2F_AUTHENTICATE_REQ *req,
   if ((ret = mbedtls_ecdsa_write_signature(
            &ctx_ec, MBEDTLS_MD_SHA256, buf, mbedtls_md_get_size(md_info),
            resp->sig, &len, mbedtls_ctr_drbg_random, &ctr_drbg)) != 0) {
-    mbedtls_printf("Error: mbedtls_ecdsa_genkey returned %d\n", ret);
+    mbedtls_printf("Error: mbedtls_ecdsa_write_signature returned %d\n", ret);
     goto cleanup;
   }
 
