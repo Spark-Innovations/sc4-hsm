@@ -27,19 +27,6 @@ u8 esk[32];
 u8 epk[32];
 u8 aes_key[32];  // For U2F
 
-void _loadkey(u8* seed) {
-  u8 hash[64];
-  crypto_hash(hash, seed, 32);
-  memcpy(_ssk, hash, 32);
-  memset(_ssk + 32, 0, 32);
-  crypto_sign_keypair_from_seed(spk, _ssk);
-  crypto_hash(hash, _ssk, 32);
-  memcpy(esk, hash, 32);
-  spk2epk(epk, spk);
-  crypto_hash(hash, hash, 64);
-  memcpy(aes_key, hash, 32);
-}
-
 void show_current_key() {
   printf("Currently loaded key:\n");
   printf("SPK: ");
@@ -75,19 +62,28 @@ void show_keys() {
   }
 }
 
-void provision(int n);
+void _loadkey(u8* seed) {
+  u8 hash[64];
+  crypto_hash(hash, seed, 32);
+  memcpy(_ssk, hash, 32);
+  memset(_ssk + 32, 0, 32);
+  crypto_sign_keypair_from_seed(spk, _ssk);
+  crypto_hash(hash, _ssk, 32);
+  memcpy(esk, hash, 32);
+  spk2epk(epk, spk);
+  crypto_hash(hash, hash, 64);
+  memcpy(aes_key, hash, 32);
+}
 
-void loadkey(int n) {
-  if (n < 0 || n > 9) {
-    printf("Key ID must be between 0 and 9\n");
-    show_current_key();
-    return;
-  }
-  u8 *seed = (u8*)FLASH_USER_START_ADDR + (n*32);
-  if (seed[0] == 0xFF) provision(n);
-  printf("Load key %d\n", n);
-  _loadkey(seed);
-  show_current_key();
+void _provision(int n) {
+  u8 seeds[20][32];
+  memcpy(seeds, (u8*)FLASH_USER_START_ADDR, sizeof(seeds));
+  randombytes(seeds[n], 32);
+  // High bit zero indicates this key has been provisioned
+  seeds[n][0] = seeds[n][0] & 0x7F;
+  _loadkey(seeds[n]);
+  memcpy(seeds[n+10], spk, 32);
+  write_flash((u8*)seeds, 0, sizeof(seeds));
 }
 
 void provision(int n) {
@@ -97,15 +93,21 @@ void provision(int n) {
     return;
   }
   printf("Provisioning key %d...\n", n);
-  u8 seeds[20][32];
-  memcpy(seeds, (u8*)FLASH_USER_START_ADDR, sizeof(seeds));
-  randombytes(seeds[n], 32);
-  // High bit zero indicates this key has been provisioned
-  seeds[n][0] = seeds[n][0] & 0x7F;
-  _loadkey(seeds[n]);
-  memcpy(seeds[n+10], spk, 32);
-  write_flash((u8*)seeds, 0, sizeof(seeds));
+  _provision(n);
   printf("Done.\n");
+}
+
+void loadkey(int n) {
+  if (n < 0 || n > 9) {
+    printf("Key ID must be between 0 and 9\n");
+    show_current_key();
+    return;
+  }
+  u8 *seed = (u8*)FLASH_USER_START_ADDR + (n*32);
+  if (seed[0] & 0x80) provision(n);
+  printf("Load key %d\n", n);
+  _loadkey(seed);
+  show_current_key();
 }
 
 void sign(u8 *bytes, int cnt) {
@@ -266,7 +268,7 @@ void help() {
   print("l[n]: Load key N\n");
   print("P[n]: Provision key N\n");
   print("R: Enable read protection\n");
-  print("u: Start FIDO U2F with currently loaded key");
+  print("u: Start FIDO U2F with currently loaded key\n");
   print("s[string]: Sign string with currently loaded key\n");
   print("d[key]: Generate a diffie-hellman key\n");
   print("h[N]: Compute the SHA512 hash of N bytes of data\n");
