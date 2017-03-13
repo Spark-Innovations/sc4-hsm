@@ -3,7 +3,7 @@
 
 -> Spark Innovations Inc. <-
 
--> May 2016 <-
+-> Version 0.3 <-
 
 ![SC4-HSM](sc4-hsm1.jpg =640x)
 
@@ -37,6 +37,10 @@ To run the pre-flashed demo, simply plug the unit into a USB port and connect to
 The SC4-HSM software comes with a little terminal emulator called "term" which you can use to communicate with the SC4-HSM.  The source code is in the tools directory.  To build it, just cd to the tools directory and type 'make'.
 
 Note that on Linux the SC4-HSM by default is accessible only by the root user, so you will need to use [sudo](https://en.wikipedia.org/wiki/Sudo) or [setuid](https://en.wikipedia.org/wiki/Setuid) to obtain the necessary privileges.
+
+### New - FIDO U2F token
+
+The SC4-HSM can function as a FIDO-U2F token.  To enable this functionality, simply plug the unit in and press either of the two user buttons.  To return to the normal demo mode (where you can access the device through a virtual comm port) press the button again.
 
 ## Programming the SC4-HSM
 
