@@ -34,6 +34,9 @@ extern "C" {
   void vbprintf(const char *, va_list);
   void bprinth(unsigned char* buf, int n);
 
+  void invertDisplay(int);
+  void rotateDisplay(int);
+
   void lcd_print(string);
   void lcd_printf(const char *, ...);
   void vlcd_printf(const char *, va_list);

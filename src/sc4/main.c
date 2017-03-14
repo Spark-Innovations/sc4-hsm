@@ -276,6 +276,7 @@ void help() {
   print("p[string]: Print string on the built-in display\n");
   print("n: Show random noise on built-in display\n");
   print("m: Moire pattern demo\n");
+  print("D[N]: Set display mode (0-3)\n");
   print("E: Erase all keys\n");
   print("S: Run TinyScheme\n");
   print("X: System reset\n");
@@ -302,6 +303,12 @@ void u2f() {
     show_u2f_banner();
     u2f_channel_process_ready();
   }
+}
+
+void set_display_mode(int n) {
+  invertDisplay(n&1);
+  rotateDisplay(n&2);
+  show_banner();
 }
 
 void loop() {
@@ -331,6 +338,7 @@ void loop() {
   case 'p': lcd_print((char *)(cmd+1)); break;
   case 'n': lcd_noise(); break;
   case 'm': moire(); break;
+  case 'D': set_display_mode(cmd[1]-'0'); break;
   case 'E': erase_keys(); break;
   case 'S': scheme_main(); break;
   case 'X': system_reset(); break;

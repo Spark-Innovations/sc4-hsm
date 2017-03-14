@@ -19,6 +19,10 @@ extern "C" void show_banner(void) {
   lcd_print(banner);
 }
 
+extern "C" void invertDisplay(int i) { display->invertDisplay(i); }
+
+extern "C" void rotateDisplay(int r) { display->setRotation(r); }
+
 extern "C" void lcd_print(string s) {
   if (!display) init_display();
   display->clearDisplay();
